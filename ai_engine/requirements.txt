@@ -1,0 +1,46 @@
+# ============================================================
+# ImportSense AI — Self-Learning Compliance Engine
+# Python AI dependencies
+# ============================================================
+
+# Web framework
+fastapi
+uvicorn[standard]
+pydantic
+
+# HTTP & Scraping
+httpx
+requests
+beautifulsoup4
+lxml
+playwright
+
+# PDF Ingestion
+pymupdf
+pdfplumber
+
+# NLP & Embeddings
+sentence-transformers
+transformers
+torch
+numpy
+scikit-learn
+
+# Vector Database
+faiss-cpu
+
+# Text processing
+nltk
+regex
+
+# Caching & Storage
+diskcache
+aiofiles
+python-dotenv
+
+# Async utilities
+aiohttp
+asyncio-throttle
+
+# Monitoring & Logging
+structlog
