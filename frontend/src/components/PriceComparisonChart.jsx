@@ -11,13 +11,6 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function PriceComparisonChart({ importCost, amazonPrice, flipkartPrice }) {
-    const labels = ['Import Cost'];
-    const importData = [importCost];
-    const amazonData = [amazonPrice || 0];
-    const flipkartData = [flipkartPrice || 0];
-
-    if (amazonPrice) labels[0] = 'Compare';
-
     const data = {
         labels: ['Import Cost', 'Amazon India', 'Flipkart'],
         datasets: [
@@ -25,13 +18,13 @@ export default function PriceComparisonChart({ importCost, amazonPrice, flipkart
                 label: 'Price (₹)',
                 data: [importCost, amazonPrice || 0, flipkartPrice || 0],
                 backgroundColor: [
-                    'rgba(236, 72, 153, 0.7)',
-                    'rgba(249, 115, 22, 0.7)',
-                    'rgba(6, 182, 212, 0.7)',
+                    'rgba(244, 63, 94, 0.75)',
+                    'rgba(245, 158, 11, 0.75)',
+                    'rgba(6, 182, 212, 0.75)',
                 ],
                 borderColor: [
-                    'rgba(236, 72, 153, 1)',
-                    'rgba(249, 115, 22, 1)',
+                    'rgba(244, 63, 94, 1)',
+                    'rgba(245, 158, 11, 1)',
                     'rgba(6, 182, 212, 1)',
                 ],
                 borderWidth: 2,
@@ -48,12 +41,14 @@ export default function PriceComparisonChart({ importCost, amazonPrice, flipkart
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: 'rgba(15, 12, 41, 0.95)',
-                borderColor: 'rgba(99, 102, 241, 0.3)',
-                borderWidth: 1,
+                backgroundColor: 'rgba(2, 44, 21, 0.98)',
+                borderColor: 'rgba(16, 185, 129, 0.5)',
+                borderWidth: 1.5,
                 padding: 12,
-                titleFont: { family: 'Inter' },
-                bodyFont: { family: 'Inter' },
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                titleFont: { family: 'Inter', weight: 700 },
+                bodyFont: { family: 'Inter', weight: 600 },
                 callbacks: {
                     label: (ctx) => ` ₹${ctx.parsed.x.toLocaleString('en-IN')}`,
                 },
@@ -61,16 +56,16 @@ export default function PriceComparisonChart({ importCost, amazonPrice, flipkart
         },
         scales: {
             x: {
-                grid: { color: 'rgba(255,255,255,0.05)' },
+                grid: { color: 'rgba(255,255,255,0.1)' },
                 ticks: {
-                    color: '#94a3b8',
-                    font: { family: 'Inter' },
+                    color: '#ffffff',
+                    font: { family: 'Inter', weight: 600 },
                     callback: (val) => '₹' + val.toLocaleString('en-IN'),
                 },
             },
             y: {
                 grid: { display: false },
-                ticks: { color: '#e2e8f0', font: { family: 'Inter', weight: 600 } },
+                ticks: { color: '#ffffff', font: { family: 'Inter', weight: 700 } },
             },
         },
     };
