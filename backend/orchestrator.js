@@ -26,7 +26,7 @@ const recommendationAgent = require('./agents/recommendationAgent');
  * @param {string} url - Product URL
  * @param {object} overrides - Optional user overrides { price, currency, category, name }
  */
-async function orchestrate(url, overrides = {}) {
+async function orchestrate(url, overrides = {}, onAgentUpdate = null) {
     const pipeline = [];
     const startTime = Date.now();
     const agentStatus = [];
@@ -39,10 +39,20 @@ async function orchestrate(url, overrides = {}) {
 
     const trackAgent = (name, success, extra = '') => {
         agentStatus.push({ agent: name, success, extra, timestamp: new Date().toISOString() });
+        if (typeof onAgentUpdate === 'function') {
+            onAgentUpdate(name, success ? 'success' : 'error', extra);
+        }
+    };
+
+    const notifyAgentStart = (name) => {
+        if (typeof onAgentUpdate === 'function') {
+            onAgentUpdate(name, 'running', '');
+        }
     };
 
     // ── AGENT 1: Product Agent ──
     console.log('[Orchestrator] → Agent 1: ProductAgent');
+    notifyAgentStart('ProductAgent');
     const productResult = await productAgent(url);
     pipeline.push(productResult);
     trackAgent('ProductAgent', productResult.success);
@@ -71,6 +81,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 2: Currency Agent ──
     console.log('[Orchestrator] → Agent 2: CurrencyAgent');
+    notifyAgentStart('CurrencyAgent');
     const currencyResult = await currencyAgent(price, currency);
     pipeline.push(currencyResult);
     trackAgent('CurrencyAgent', currencyResult.success);
@@ -81,6 +92,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 3: Compliance Agent (LIVE REGULATORY INTELLIGENCE) ──
     console.log('[Orchestrator] → Agent 3: ComplianceAgent (Live DGFT + CBIC)');
+    notifyAgentStart('ComplianceAgent');
     const complianceResult = await complianceAgent(name, category, identity?.fullIdentity || '');
     pipeline.push(complianceResult);
     trackAgent('ComplianceAgent', complianceResult.success, `Level: ${complianceResult.data?.complianceLevel}`);
@@ -88,6 +100,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 4: Duty Agent (LIVE CBIC TARIFF) ──
     console.log('[Orchestrator] → Agent 4: DutyAgent (Live CBIC Tariff + HS Code)');
+    notifyAgentStart('DutyAgent');
     const dutyResult = await dutyAgent(priceInINR, category, name);
     pipeline.push(dutyResult);
     trackAgent('DutyAgent', dutyResult.success, `HS: ${dutyResult.data?.HS_code}`);
@@ -95,6 +108,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 5: Risk Agent (COMPOSITE INTELLIGENCE SCORE) ──
     console.log('[Orchestrator] → Agent 5: RiskAgent (Composite Score + Country Profile)');
+    notifyAgentStart('RiskAgent');
     const riskResult = await riskAgent(category, priceInINR, country, complianceData);
     pipeline.push(riskResult);
     trackAgent('RiskAgent', riskResult.success, `Score: ${riskResult.data?.importIntelligenceScore}/100`);
@@ -102,6 +116,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 6: Price Comparison Agent ──
     console.log('[Orchestrator] → Agent 6: PriceComparisonAgent');
+    notifyAgentStart('PriceComparisonAgent');
     const priceResult = await priceComparisonAgent(name, category, priceInINR, identity || {});
     pipeline.push(priceResult);
     trackAgent('PriceComparisonAgent', priceResult.success);
@@ -109,6 +124,7 @@ async function orchestrate(url, overrides = {}) {
 
     // ── AGENT 7: Recommendation Agent ──
     console.log('[Orchestrator] → Agent 7: RecommendationAgent');
+    notifyAgentStart('RecommendationAgent');
     const recResult = await recommendationAgent(
         totalLandedCost,
         bestLocalPrice,

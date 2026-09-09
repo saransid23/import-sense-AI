@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react';
 
 const AGENT_STEPS = [
-    { name: 'Product Agent', desc: 'Extracting product details & identity...' },
-    { name: 'Currency Agent', desc: 'Converting to INR via live exchange rates...' },
-    { name: 'Compliance Agent', desc: 'Fetching DGFT & CBIC regulatory rules...' },
-    { name: 'Duty Agent', desc: 'Querying CBIC customs tariff (HS Code)...' },
-    { name: 'Risk Agent', desc: 'Computing Import Intelligence Score...' },
-    { name: 'Price Comparison Agent', desc: 'Searching Amazon India & Flipkart...' },
-    { name: 'Recommendation Agent', desc: 'Generating final import advice...' },
+    { id: 'ProductAgent', name: 'Product Agent', desc: 'Extracting product details & identity...' },
+    { id: 'CurrencyAgent', name: 'Currency Agent', desc: 'Converting to INR via live exchange rates...' },
+    { id: 'ComplianceAgent', name: 'Compliance Agent', desc: 'Fetching DGFT & CBIC regulatory rules...' },
+    { id: 'DutyAgent', name: 'Duty Agent', desc: 'Querying CBIC customs tariff (HS Code)...' },
+    { id: 'RiskAgent', name: 'Risk Agent', desc: 'Computing Import Intelligence Score...' },
+    { id: 'PriceComparisonAgent', name: 'Price Comparison Agent', desc: 'Searching Amazon India & Flipkart...' },
+    { id: 'RecommendationAgent', name: 'Recommendation Agent', desc: 'Generating final import advice...' },
 ];
 
-export default function LoadingScreen() {
-    const [currentStep, setCurrentStep] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentStep((prev) => {
-                if (prev < AGENT_STEPS.length - 1) return prev + 1;
-                return prev;
-            });
-        }, 700);
-        return () => clearInterval(interval);
-    }, []);
+export default function LoadingScreen({ stepStates = {} }) {
+    const hasLiveUpdates = Object.keys(stepStates).length > 0;
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4">
@@ -37,29 +27,43 @@ export default function LoadingScreen() {
             </div>
 
             <div className="max-w-md w-full space-y-3">
-                {AGENT_STEPS.map((step, i) => (
-                    <div
-                        key={i}
-                        className={`glass-card flex items-center gap-4 px-5 py-3 transition-all duration-500 ${i < currentStep
-                                ? 'opacity-100'
-                                : i === currentStep
-                                    ? 'opacity-100 pulse-glow'
-                                    : 'opacity-40'
+                {AGENT_STEPS.map((step, i) => {
+                    const state = stepStates[step.id];
+                    const isSuccess = state?.status === 'success';
+                    const isRunning = state?.status === 'running' || (!hasLiveUpdates && i === 0);
+
+                    return (
+                        <div
+                            key={step.id}
+                            className={`glass-card flex items-center gap-4 px-5 py-3 transition-all duration-500 ${
+                                isSuccess
+                                    ? 'opacity-100'
+                                    : isRunning
+                                        ? 'opacity-100 pulse-glow'
+                                        : 'opacity-40'
                             }`}
-                        style={{
-                            borderColor: i < currentStep ? 'rgba(16,185,129,0.4)' : i === currentStep ? 'rgba(16,185,129,0.5)' : undefined
-                        }}
-                    >
-                        <div className="flex-1">
-                            <p className="font-extrabold text-white text-sm">{step.name}</p>
-                            <p className="text-xs text-white/80 font-medium">{step.desc}</p>
+                            style={{
+                                borderColor: isSuccess ? 'rgba(16,185,129,0.4)' : isRunning ? 'rgba(16,185,129,0.5)' : undefined
+                            }}
+                        >
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <p className="font-extrabold text-white text-sm">{step.name}</p>
+                                    {step.id === 'ComplianceAgent' && isSuccess && state?.extra && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-fade-in">
+                                            {state.extra}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-white/80 font-medium">{step.desc}</p>
+                            </div>
+                            {isSuccess && <span className="text-emerald-400 font-black text-lg">✓</span>}
+                            {isRunning && (
+                                <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                            )}
                         </div>
-                        {i < currentStep && <span className="text-emerald-400 font-black text-lg">✓</span>}
-                        {i === currentStep && (
-                            <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Live data source indicator */}

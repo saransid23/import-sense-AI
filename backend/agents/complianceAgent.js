@@ -68,6 +68,7 @@ async function complianceAgent(productName, category, productDescription = '') {
         // Extract issues/violations from all agents
         const violations = [];
         const warnings = [];
+        const allMatchedSources = [];
         let totalLiveMatches = 0;
         let totalKbSize = 0;
 
@@ -78,10 +79,24 @@ async function complianceAgent(productName, category, productDescription = '') {
             const matchesCount = agentData.ai_reasoning?.semantic_matches_found || 0;
             totalLiveMatches += matchesCount;
 
+            const agentMatches = (agentData.ai_reasoning?.top_matches || []).map(m => ({
+                agent: agentName,
+                text: m.text,
+                source: m.source,
+                similarity_score: m.similarity_score,
+            }));
+            allMatchedSources.push(...agentMatches);
+
             const level = agentData.compliance_level;
 
             // Reformat AI evidence into UI-compatible "issue" card format
             if (level !== 'SAFE') {
+                const issueEvidence = agentMatches.slice(0, 2).map(m => ({
+                    text: m.text,
+                    source: m.source,
+                    similarity_score: m.similarity_score,
+                }));
+
                 const issue = {
                     id: `${agentName.toUpperCase()}_ALERT`,
                     level: level === 'MODERATE' ? 'MODERATE_RISK' : level,
@@ -90,6 +105,7 @@ async function complianceAgent(productName, category, productDescription = '') {
                     message: agentData.recommendations.join(' '),
                     icon: level === 'PROHIBITED' ? '🚫' : (level === 'RESTRICTED' ? '⚠️' : '📋'),
                     sourceRef: `${agentName} AI Reasoning (Confidence: ${agentData.confidence_pct}%)`,
+                    evidence: issueEvidence,
                 };
 
                 if (level === 'PROHIBITED' || level === 'RESTRICTED') {
@@ -100,11 +116,15 @@ async function complianceAgent(productName, category, productDescription = '') {
             }
         }
 
+        const matchedSources = allMatchedSources
+            .sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
+            .slice(0, 6);
+
         const elapsed = Date.now() - agentStart;
         const statusKey = aggregateLevel === 'MODERATE' ? 'MODERATE' : aggregateLevel;
         const status = STATUS_CONFIG[statusKey] || STATUS_CONFIG.SAFE;
 
-        console.log(`[ComplianceAgent] ✓ AI Engine complete: ${aggregateLevel} | ${violations.length} violations | ${elapsed}ms`);
+        console.log(`[ComplianceAgent] ✓ AI Engine complete: ${aggregateLevel} | ${violations.length} violations | ${matchedSources.length} sources | ${elapsed}ms`);
 
         // Format to match existing orchestrator/UI expectations
         return {
@@ -119,6 +139,7 @@ async function complianceAgent(productName, category, productDescription = '') {
                 status: status,
                 violations,
                 warnings,
+                matchedSources,
                 liveIntelligence: {
                     dgftConnected: totalKbSize > 0,
                     cbicConnected: totalKbSize > 0,
@@ -156,6 +177,7 @@ async function complianceAgent(productName, category, productDescription = '') {
                 status: STATUS_CONFIG.SAFE,
                 violations: [],
                 warnings: [],
+                matchedSources: [],
                 data_source: 'Fallback - AI Engine Unavailable',
                 liveIntelligence: {
                     dgftConnected: false, cbicConnected: false, liveMatchesFound: 0

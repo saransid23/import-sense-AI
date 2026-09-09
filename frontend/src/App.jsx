@@ -10,11 +10,9 @@ function App() {
   const [error, setError] = useState(null);
   const [pendingUrl, setPendingUrl] = useState('');
   const [partialData, setPartialData] = useState(null);
+  const [stepStates, setStepStates] = useState({});
 
-  const handleAnalyze = async (url, overrides = {}) => {
-    setView('loading');
-    setError(null);
-
+  const handleAnalyzeFallback = async (url, overrides = {}) => {
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -28,7 +26,6 @@ function App() {
         setAnalysisData(data);
         setView('results');
       } else if (data.needsManualInput) {
-        // Price couldn't be extracted, show manual input form
         setPendingUrl(url);
         setPartialData(data.partialData);
         setView('manual');
@@ -42,6 +39,69 @@ function App() {
     }
   };
 
+  const handleAnalyze = (url, overrides = {}) => {
+    setView('loading');
+    setError(null);
+    setStepStates({});
+
+    const query = new URLSearchParams({ url, ...overrides });
+    const streamUrl = `/api/analyze/stream?${query.toString()}`;
+
+    let eventSource;
+    let receivedAnyUpdate = false;
+
+    try {
+      eventSource = new EventSource(streamUrl);
+
+      eventSource.addEventListener('agent-update', (e) => {
+        receivedAnyUpdate = true;
+        try {
+          const update = JSON.parse(e.data);
+          setStepStates((prev) => ({
+            ...prev,
+            [update.agent]: { status: update.status, extra: update.extra },
+          }));
+        } catch (err) {
+          console.error('Failed to parse SSE update:', err);
+        }
+      });
+
+      eventSource.addEventListener('complete', (e) => {
+        eventSource.close();
+        try {
+          const data = JSON.parse(e.data);
+          if (data.success) {
+            setAnalysisData(data);
+            setView('results');
+          } else if (data.needsManualInput) {
+            setPendingUrl(url);
+            setPartialData(data.partialData);
+            setView('manual');
+          } else {
+            setError(data.error || 'Analysis failed');
+            setView('landing');
+          }
+        } catch (err) {
+          handleAnalyzeFallback(url, overrides);
+        }
+      });
+
+      eventSource.addEventListener('error', () => {
+        eventSource.close();
+        if (!receivedAnyUpdate) {
+          console.warn('[SSE] EventSource failed, falling back to POST /api/analyze');
+          handleAnalyzeFallback(url, overrides);
+        } else {
+          setError('Analysis connection closed unexpectedly. Please try again.');
+          setView('landing');
+        }
+      });
+    } catch (err) {
+      console.warn('[SSE] EventSource init failed, falling back to POST /api/analyze');
+      handleAnalyzeFallback(url, overrides);
+    }
+  };
+
   const handleManualSubmit = (overrides) => {
     handleAnalyze(pendingUrl, overrides);
   };
@@ -52,6 +112,7 @@ function App() {
     setError(null);
     setPendingUrl('');
     setPartialData(null);
+    setStepStates({});
   };
 
   return (
@@ -60,7 +121,7 @@ function App() {
       {view === 'landing' && (
         <LandingPage onAnalyze={handleAnalyze} error={error} />
       )}
-      {view === 'loading' && <LoadingScreen />}
+      {view === 'loading' && <LoadingScreen stepStates={stepStates} />}
       {view === 'manual' && (
         <ManualInputModal
           partialData={partialData}

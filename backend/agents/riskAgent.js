@@ -177,6 +177,22 @@ async function riskAgent(category, priceINR, country, complianceData = null) {
         'Unknown': { score: 50, label: 'Verify Source' },
     };
 
+    // ── Derive score breakdown reasons ──
+    const complianceReasons = {
+        'PROHIBITED': 'Prohibited from import into India',
+        'RESTRICTED': 'Requires certification or license before import',
+        'MODERATE_RISK': 'Compliance check required — verify Indian standards',
+        'SAFE': 'No restrictions found for this product category',
+    };
+    const complianceReason = complianceReasons[complianceLevel] || 'Standard compliance evaluation';
+
+    let priceReason = '';
+    if (priceINR <= 5000) priceReason = 'Low-value shipment within gift exemption limit';
+    else if (priceINR <= 15000) priceReason = 'Moderate value shipment with standard clearance';
+    else if (priceINR <= 30000) priceReason = 'Mid-high value shipment, duty assessment required';
+    else if (priceINR <= 50000) priceReason = 'High-value import subject to increased scrutiny';
+    else priceReason = 'Very high-value import — customs inspection almost certain';
+
     console.log(`[RiskAgent] ✓ Intelligence Score: ${intelligenceScore}/100 | Risk: ${scoreInfo.riskLevel} | Compliance: ${complianceLevel}`);
 
     return {
@@ -196,9 +212,13 @@ async function riskAgent(category, priceINR, country, complianceData = null) {
             importIntelligenceScore: intelligenceScore,
             scoreBreakdown: {
                 complianceScore: scoreBreakdown.complianceScore,
+                complianceReason: complianceReason,
                 countryOriginScore: scoreBreakdown.countryScore,
+                countryOriginReason: countryData.reason || 'Standard trade route',
                 categoryRiskScore: scoreBreakdown.categoryScore,
+                categoryReason: categoryData.reason,
                 priceRiskScore: scoreBreakdown.priceScore,
+                priceReason: priceReason,
             },
             scoreLabel: scoreInfo.label,
             scoreColor: scoreInfo.color,

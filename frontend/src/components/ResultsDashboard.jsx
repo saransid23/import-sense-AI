@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import IntelligenceScore from './IntelligenceScore';
 import CostBreakdownChart from './CostBreakdownChart';
 import PriceComparisonChart from './PriceComparisonChart';
@@ -23,13 +24,36 @@ function DataSourceBadge({ source }) {
     if (!source) return null;
     const isLive = source.toLowerCase().includes('live');
     const isCached = source.toLowerCase().includes('cached');
-    const bg = isLive ? 'rgba(16,185,129,0.2)' : isCached ? 'rgba(6,182,212,0.2)' : 'rgba(255,255,255,0.15)';
-    const color = isLive ? '#a7f3d0' : isCached ? '#a5f3fc' : '#ffffff';
+
+    let bg, color, borderColor, dotClass;
+    if (isLive) {
+        bg = 'rgba(16, 185, 129, 0.2)';
+        color = '#a7f3d0';
+        borderColor = 'rgba(16, 185, 129, 0.4)';
+        dotClass = 'bg-emerald-400 animate-pulse';
+    } else if (isCached) {
+        bg = 'rgba(6, 182, 212, 0.2)';
+        color = '#a5f3fc';
+        borderColor = 'rgba(6, 182, 212, 0.4)';
+        dotClass = 'bg-cyan-400';
+    } else {
+        bg = 'rgba(245, 158, 11, 0.2)';
+        color = '#fef08a';
+        borderColor = 'rgba(245, 158, 11, 0.4)';
+        dotClass = 'bg-amber-400';
+    }
+
     return (
-        <span className="text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 whitespace-nowrap"
-            style={{ background: bg, color, border: `1px solid ${color}40` }}>
-            {source}
-        </span>
+        <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="text-white/80 font-semibold">Tariff Data Source</span>
+            <span
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full text-right"
+                style={{ background: bg, color, border: `1px solid ${borderColor}` }}
+            >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+                <span>{source}</span>
+            </span>
+        </div>
     );
 }
 
@@ -183,50 +207,14 @@ export default function ResultsDashboard({ data, onReset }) {
                         {importCosts.HS_code && (
                             <span className="text-xs font-bold px-3 py-1 rounded-full"
                                 style={{ background: 'rgba(16,185,129,0.2)', color: '#a7f3d0', border: '1px solid rgba(16,185,129,0.35)' }}>
-                                HS: {importCosts.HS_code}
+                                HS Code: {importCosts.HS_code}
                             </span>
                         )}
                     </div>
-                    <CostBreakdownChart breakdown={importCosts.breakdown} />
-                    <div className="mt-4 pt-4 border-t border-white/15 space-y-2">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-white font-medium">Product Price</span>
-                            <span className="text-white font-bold">{formatINR(importCosts.basePrice)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-white font-medium">Shipping / CIF</span>
-                            <span className="text-amber-300 font-bold">{formatINR(importCosts.shipping)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-white font-medium">Basic Customs Duty ({importCosts.dutyRate})</span>
-                            <span className="text-rose-300 font-bold">{formatINR(importCosts.customsDuty)}</span>
-                        </div>
-                        {importCosts.swsAmount > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-white font-medium">Social Welfare Surcharge ({importCosts.social_welfare_surcharge})</span>
-                                <span className="text-violet-300 font-bold">{formatINR(importCosts.swsAmount)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-sm">
-                            <span className="text-white font-medium">IGST ({importCosts.igstRate})</span>
-                            <span className="text-cyan-300 font-bold">{formatINR(importCosts.igst)}</span>
-                        </div>
-                        <div className="flex justify-between text-base font-black mt-3 pt-3 border-t border-white/20">
-                            <span className="text-white">Total Landed Cost</span>
-                            <span className="text-emerald-300 text-xl font-black" style={{ textShadow: '0 0 12px rgba(16,185,129,0.4)' }}>{formatINR(importCosts.totalLandedCost)}</span>
-                        </div>
-                        {importCosts.hsDescription && (
-                            <p className="text-xs text-emerald-200 font-medium mt-1">
-                                HS Chapter: {importCosts.hsDescription}
-                            </p>
-                        )}
+                    <div className="mb-4">
+                        <CostBreakdownChart breakdown={importCosts.breakdown} />
                     </div>
-                    {/* Live data source */}
-                    {importCosts.dutyDataSource && (
-                        <div className="mt-3 pt-3 border-t border-white/15">
-                            <DataSourceBadge source={importCosts.dutyDataSource} />
-                        </div>
-                    )}
+                    <TariffBreakdownTable importCosts={importCosts} />
                 </div>
 
                 {/* Price Comparison */}
@@ -294,7 +282,7 @@ export default function ResultsDashboard({ data, onReset }) {
             </div>
 
             {/* Import Compliance Panel */}
-            {compliance && <CompliancePanel compliance={compliance} />}
+            {compliance && <CompliancePanel compliance={compliance} productName={product.name} />}
 
             {/* Risk & Agent Pipeline Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -324,11 +312,11 @@ export default function ResultsDashboard({ data, onReset }) {
                     {/* Score Breakdown */}
                     {risk.scoreBreakdown && (
                         <div className="mb-4 p-3 rounded-xl space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                            <p className="text-xs font-bold text-white uppercase mb-2 tracking-wider">Score Breakdown</p>
-                            <ScoreBar label="Compliance" score={risk.scoreBreakdown.complianceScore} />
-                            <ScoreBar label="Country Origin" score={risk.scoreBreakdown.countryOriginScore} />
-                            <ScoreBar label="Product Category" score={risk.scoreBreakdown.categoryRiskScore} />
-                            <ScoreBar label="Price Risk" score={risk.scoreBreakdown.priceRiskScore} />
+                            <p className="text-xs font-bold text-white uppercase mb-2 tracking-wider">Score Breakdown (Click to expand)</p>
+                            <ScoreBar label="Compliance" score={risk.scoreBreakdown.complianceScore} reason={risk.scoreBreakdown.complianceReason} delayClass="animate-fade-in animate-delay-1" />
+                            <ScoreBar label="Country Origin" score={risk.scoreBreakdown.countryOriginScore} reason={risk.scoreBreakdown.countryOriginReason || risk.countryProfile?.reason} delayClass="animate-fade-in animate-delay-2" />
+                            <ScoreBar label="Product Category" score={risk.scoreBreakdown.categoryRiskScore} reason={risk.scoreBreakdown.categoryReason || risk.categoryProfile?.reason} delayClass="animate-fade-in animate-delay-3" />
+                            <ScoreBar label="Price Risk" score={risk.scoreBreakdown.priceRiskScore} reason={risk.scoreBreakdown.priceReason} delayClass="animate-fade-in animate-delay-4" />
                         </div>
                     )}
 
@@ -440,6 +428,107 @@ function InfoBadge({ label, value, highlight }) {
     );
 }
 
+function TariffBreakdownTable({ importCosts }) {
+    if (!importCosts) return null;
+
+    const total = importCosts.totalLandedCost || 1;
+    const basePct = Math.round(((importCosts.basePrice || 0) / total) * 100);
+    const shippingPct = Math.round(((importCosts.shipping || 0) / total) * 100);
+    const bcdPct = Math.round(((importCosts.customsDuty || 0) / total) * 100);
+    const swsPct = Math.round(((importCosts.swsAmount || 0) / total) * 100);
+    const igstPct = Math.round(((importCosts.igst || 0) / total) * 100);
+
+    const isLive = importCosts.dutyDataSource?.toLowerCase().includes('live');
+    const isCached = importCosts.dutyDataSource?.toLowerCase().includes('cached');
+
+    const sourceBg = isLive ? 'rgba(16, 185, 129, 0.2)' : isCached ? 'rgba(6, 182, 212, 0.2)' : 'rgba(245, 158, 11, 0.2)';
+    const sourceColor = isLive ? '#a7f3d0' : isCached ? '#a5f3fc' : '#fef08a';
+    const sourceBorder = isLive ? 'rgba(16, 185, 129, 0.4)' : isCached ? 'rgba(6, 182, 212, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+    const dotClass = isLive ? 'bg-emerald-400 animate-pulse' : isCached ? 'bg-cyan-400' : 'bg-amber-400';
+
+    return (
+        <div className="space-y-4">
+            {/* Top context strip */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl"
+                style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-300">HS Classification:</span>
+                    <span className="text-xs text-white font-medium">{importCosts.hsDescription || `Chapter ${importCosts.HS_code?.substring(0, 2)}`}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
+                    style={{ background: sourceBg, color: sourceColor, border: `1px solid ${sourceBorder}` }}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+                    <span>{importCosts.dutyDataSource || 'CBIC Tariff'}</span>
+                </div>
+            </div>
+
+            {/* Custom Glass Table */}
+            <div className="overflow-x-auto rounded-xl border border-white/15" style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr className="border-b border-white/15 text-emerald-300 font-extrabold uppercase tracking-wider"
+                            style={{ background: 'rgba(16, 185, 129, 0.15)' }}>
+                            <th className="py-2.5 px-3">Cost Component</th>
+                            <th className="py-2.5 px-3">Rate / Basis</th>
+                            <th className="py-2.5 px-3 text-right">Amount</th>
+                            <th className="py-2.5 px-3 text-right">Share</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10 text-white font-medium">
+                        <tr className="hover:bg-white/[0.05] transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-white">Product Price (FOB)</td>
+                            <td className="py-2.5 px-3 text-white/70">Base item price</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-white">{formatINR(importCosts.basePrice)}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-white/80">{basePct}%</td>
+                        </tr>
+                        <tr className="hover:bg-white/[0.05] transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-white">Shipping & Freight</td>
+                            <td className="py-2.5 px-3 text-amber-300/90 font-medium">CIF 10% rate</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-amber-300">{formatINR(importCosts.shipping)}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-amber-300/80">{shippingPct}%</td>
+                        </tr>
+                        <tr className="bg-white/[0.03] hover:bg-white/[0.07] transition-colors font-semibold">
+                            <td className="py-2.5 px-3 text-emerald-200">Assessable Value (AV)</td>
+                            <td className="py-2.5 px-3 text-emerald-200/80">Price + Shipping</td>
+                            <td className="py-2.5 px-3 text-right font-extrabold text-emerald-200">{formatINR(importCosts.assessableValue || (importCosts.basePrice + importCosts.shipping))}</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-200/80">Base AV</td>
+                        </tr>
+                        <tr className="hover:bg-white/[0.05] transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-white">Basic Customs Duty (BCD)</td>
+                            <td className="py-2.5 px-3 text-rose-300/90 font-medium">{importCosts.dutyRatePercent || importCosts.dutyRate}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-rose-300">{formatINR(importCosts.customsDuty)}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-rose-300/80">{bcdPct}%</td>
+                        </tr>
+                        {importCosts.swsAmount > 0 && (
+                            <tr className="hover:bg-white/[0.05] transition-colors">
+                                <td className="py-2.5 px-3 font-semibold text-white">Social Welfare Surcharge (SWS)</td>
+                                <td className="py-2.5 px-3 text-violet-300/90 font-medium">{importCosts.social_welfare_surcharge || '10% of BCD'}</td>
+                                <td className="py-2.5 px-3 text-right font-bold text-violet-300">{formatINR(importCosts.swsAmount)}</td>
+                                <td className="py-2.5 px-3 text-right font-semibold text-violet-300/80">{swsPct}%</td>
+                            </tr>
+                        )}
+                        <tr className="hover:bg-white/[0.05] transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-white">Integrated GST (IGST)</td>
+                            <td className="py-2.5 px-3 text-cyan-300/90 font-medium">{importCosts.igstRatePercent || importCosts.igstRate}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-cyan-300">{formatINR(importCosts.igst)}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-cyan-300/80">{igstPct}%</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr className="border-t-2 border-emerald-400/50" style={{ background: 'rgba(16, 185, 129, 0.25)' }}>
+                            <td className="py-3 px-3 text-sm font-black text-white" colSpan={2}>Total Landed Cost</td>
+                            <td className="py-3 px-3 text-right text-lg font-black text-emerald-300" style={{ textShadow: '0 0 12px rgba(16,185,129,0.5)' }}>
+                                {formatINR(importCosts.totalLandedCost)}
+                            </td>
+                            <td className="py-3 px-3 text-right text-xs font-black text-emerald-300">100%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 function PriceRow({ label, price, color, url, matchInfo }) {
     return (
         <div className="flex items-center justify-between text-sm">
@@ -472,16 +561,31 @@ function QCRow({ label, pass, detail }) {
     );
 }
 
-function ScoreBar({ label, score }) {
+function ScoreBar({ label, score, reason, delayClass }) {
+    const [expanded, setExpanded] = useState(false);
     const color = score >= 70 ? '#34d399' : score >= 45 ? '#fcd34d' : '#fca5a5';
+
     return (
-        <div className="flex items-center gap-2 text-xs">
-            <span className="text-white font-semibold w-28 flex-shrink-0">{label}</span>
-            <div className="flex-1 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <div className="h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${score}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
+        <div className={`space-y-1.5 transition-all ${delayClass || ''}`}>
+            <div
+                onClick={() => reason && setExpanded(!expanded)}
+                className={`flex items-center gap-2 text-xs py-1 rounded-lg px-1.5 transition-colors ${reason ? 'cursor-pointer hover:bg-white/10' : ''}`}
+            >
+                <span className="text-white font-semibold w-28 flex-shrink-0 flex items-center justify-between">
+                    {label}
+                    {reason && <span className="text-[10px] text-white/50">{expanded ? '▲' : '▼'}</span>}
+                </span>
+                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                    <div className="h-2 rounded-full transition-all duration-700"
+                        style={{ width: `${score}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
+                </div>
+                <span className="font-extrabold w-6 text-right text-white">{score}</span>
             </div>
-            <span className="font-extrabold w-6 text-right text-white">{score}</span>
+            {reason && expanded && (
+                <div className="text-[11px] text-white/90 font-medium ml-28 pr-2 py-1.5 px-2 bg-white/10 rounded-md border-l-2 border-emerald-400 animate-fade-in">
+                    {reason}
+                </div>
+            )}
         </div>
     );
 }
@@ -501,29 +605,169 @@ function LiveSourceRow({ label, connected, url }) {
     );
 }
 
+function EvidenceSnippetRow({ source, text, score, agent }) {
+    const [expanded, setExpanded] = useState(false);
+    const scorePct = Math.round((score || 0) * 100);
+    const isHigh = scorePct >= 80;
+    const isMedium = scorePct >= 50 && scorePct < 80;
+
+    const bg = isHigh ? 'rgba(16,185,129,0.2)' : isMedium ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.15)';
+    const color = isHigh ? '#a7f3d0' : isMedium ? '#fef08a' : '#e2e8f0';
+
+    const isLong = text && text.length > 120;
+    const displayText = !expanded && isLong ? text.slice(0, 120) + '...' : text;
+
+    return (
+        <div className="p-2.5 rounded-lg text-xs space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-white truncate max-w-[200px]" title={source}>{source || agent || 'Regulatory Source'}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: bg, color }}>
+                    {scorePct > 0 ? `${scorePct}% Match` : 'Rulebook Match'}
+                </span>
+            </div>
+            <p className="text-white/90 leading-relaxed font-medium">
+                "{displayText}"
+                {isLong && (
+                    <button
+                        type="button"
+                        onClick={() => setExpanded(!expanded)}
+                        className="ml-1 text-emerald-300 font-bold hover:underline cursor-pointer"
+                    >
+                        {expanded ? 'show less' : 'show more'}
+                    </button>
+                )}
+            </p>
+        </div>
+    );
+}
+
+function FeedbackWidget({ productName, complianceLevel }) {
+    const [submitted, setSubmitted] = useState(false);
+    const [showNotes, setShowNotes] = useState(false);
+    const [notes, setNotes] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const submitFeedback = async (outcome, customNotes = '') => {
+        setLoading(true);
+        try {
+            await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agent: 'import_compliance',
+                    product_name: productName || 'Unknown Product',
+                    predicted_level: complianceLevel || 'SAFE',
+                    outcome: outcome,
+                    notes: customNotes,
+                }),
+            });
+        } catch (err) {
+            console.error('[Feedback] Call failed:', err);
+        } finally {
+            setLoading(false);
+            setSubmitted(true);
+        }
+    };
+
+    const handleVote = (outcome) => {
+        if (outcome === 'flagged') {
+            setShowNotes(true);
+        } else {
+            submitFeedback(outcome, '');
+        }
+    };
+
+    const handleNotesSubmit = (e) => {
+        e.preventDefault();
+        submitFeedback('flagged', notes);
+    };
+
+    return (
+        <div className="mt-4 pt-4 border-t border-white/15">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span className="text-xs font-bold text-white">Was this compliance check accurate?</span>
+
+                {submitted ? (
+                    <span className="text-xs font-bold text-emerald-300 animate-fade-in flex items-center gap-1">
+                        ✓ Thanks — this helps ImportSense learn
+                    </span>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => handleVote('approved')}
+                            className="px-3 py-1 text-xs font-bold rounded-lg border border-emerald-500/40 text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                            👍 Accurate
+                        </button>
+                        <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => handleVote('flagged')}
+                            className="px-3 py-1 text-xs font-bold rounded-lg border border-amber-500/40 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                            👎 Flag Issue
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {showNotes && !submitted && (
+                <form onSubmit={handleNotesSubmit} className="mt-3 p-3 rounded-xl space-y-2 animate-fade-in" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p className="text-xs text-white/80 font-medium">Optional: What was inaccurate or missing?</p>
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add notes (e.g. BIS certification is not required for this item...)"
+                        rows={2}
+                        className="w-full text-xs p-2 rounded-lg bg-black/40 text-white border border-white/15 focus:outline-none focus:border-emerald-400"
+                    />
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => submitFeedback('flagged', '')}
+                            className="px-3 py-1 text-xs text-white/60 font-semibold hover:text-white"
+                        >
+                            Skip & Submit
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="btn-gradient px-3 py-1 text-xs"
+                        >
+                            Submit Feedback
+                        </button>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
+}
+
 /* ─── Compliance Panel ───────────────────────────────────────── */
-function CompliancePanel({ compliance }) {
-    const { complianceLevel, status, violations, warnings, referenceLinks, liveIntelligence } = compliance;
+function CompliancePanel({ compliance, productName }) {
+    const { complianceLevel, status, violations, warnings, referenceLinks, liveIntelligence, matchedSources } = compliance;
 
     const levelStyles = {
-        SAFE: { bg: 'rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.4)', headerBg: 'rgba(16,185,129,0.25)', headerColor: '#a7f3d0' },
-        MODERATE_RISK: { bg: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.4)', headerBg: 'rgba(245,158,11,0.25)', headerColor: '#fef08a' },
-        RESTRICTED: { bg: 'rgba(249,115,22,0.12)', borderColor: 'rgba(249,115,22,0.4)', headerBg: 'rgba(249,115,22,0.25)', headerColor: '#ffedd5' },
-        PROHIBITED: { bg: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.4)', headerBg: 'rgba(239,68,68,0.25)', headerColor: '#fecaca' },
+        SAFE: { borderColor: 'rgba(16,185,129,0.4)', headerBg: 'rgba(16,185,129,0.1)', headerBorder: 'rgba(16,185,129,0.3)', accentColor: '#34d399', badgeBg: 'rgba(16,185,129,0.2)', badgeColor: '#a7f3d0' },
+        MODERATE_RISK: { borderColor: 'rgba(245,158,11,0.4)', headerBg: 'rgba(245,158,11,0.1)', headerBorder: 'rgba(245,158,11,0.3)', accentColor: '#fcd34d', badgeBg: 'rgba(245,158,11,0.2)', badgeColor: '#fef08a' },
+        RESTRICTED: { borderColor: 'rgba(249,115,22,0.4)', headerBg: 'rgba(249,115,22,0.1)', headerBorder: 'rgba(249,115,22,0.3)', accentColor: '#fb923c', badgeBg: 'rgba(249,115,22,0.2)', badgeColor: '#ffedd5' },
+        PROHIBITED: { borderColor: 'rgba(239,68,68,0.4)', headerBg: 'rgba(239,68,68,0.1)', headerBorder: 'rgba(239,68,68,0.3)', accentColor: '#f87171', badgeBg: 'rgba(239,68,68,0.2)', badgeColor: '#fecaca' },
     };
 
     const style = levelStyles[complianceLevel] || levelStyles.SAFE;
     const allIssues = [...(violations || []), ...(warnings || [])];
 
     return (
-        <div className="glass-card p-6 mb-6 animate-fade-in" style={{ background: style.bg, borderColor: style.borderColor }}>
+        <div className="glass-card p-6 mb-6 animate-fade-in" style={{ borderColor: style.borderColor }}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-extrabold text-emerald-300 uppercase tracking-widest">
                     Customs & Trade Compliance
                 </h3>
                 <span className="text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider"
-                    style={{ background: style.headerBg, color: style.headerColor, border: `1px solid ${style.borderColor}` }}>
+                    style={{ background: style.badgeBg, color: style.badgeColor, border: `1px solid ${style.borderColor}` }}>
                     {complianceLevel}
                 </span>
             </div>
@@ -552,10 +796,11 @@ function CompliancePanel({ compliance }) {
             )}
 
             {/* Main status message */}
-            <div className="flex items-start gap-4 mb-4 p-4 rounded-xl" style={{ background: style.headerBg }}>
+            <div className="flex items-start gap-4 mb-4 p-4 rounded-xl border-l-4"
+                style={{ background: style.headerBg, borderColor: style.accentColor, borderTop: `1px solid ${style.headerBorder}`, borderRight: `1px solid ${style.headerBorder}`, borderBottom: `1px solid ${style.headerBorder}` }}>
                 <div>
                     <p className="font-extrabold text-white text-base mb-1">{status.label}</p>
-                    <p className="text-sm text-white leading-relaxed font-medium">{status.shortMsg}</p>
+                    <p className="text-sm text-white/90 leading-relaxed font-medium">{status.shortMsg}</p>
                 </div>
             </div>
 
@@ -623,6 +868,25 @@ function CompliancePanel({ compliance }) {
                     Live data from DGFT ITC-HS Import Policy & CBIC Customs Tariff
                 </p>
             </div>
+
+            {/* Evidence Reviewed */}
+            <div className="mt-4 pt-4 border-t border-white/15">
+                <p className="text-xs font-extrabold text-white uppercase tracking-wider mb-2">Evidence Reviewed</p>
+                {matchedSources && matchedSources.length > 0 ? (
+                    <div className="space-y-2">
+                        {matchedSources.map((item, idx) => (
+                            <EvidenceSnippetRow key={idx} source={item.source} text={item.text} score={item.similarity_score} agent={item.agent} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-xs text-white/70 italic font-medium">
+                        No live source match — using cached compliance rules
+                    </p>
+                )}
+            </div>
+
+            {/* Feedback Widget */}
+            <FeedbackWidget productName={productName} complianceLevel={complianceLevel} />
         </div>
     );
 }
@@ -645,10 +909,18 @@ function ComplianceIssueCard({ issue, severity }) {
                     {issue.agency || (isHigh ? 'Violation' : 'Warning')}
                 </span>
             </div>
-            <p className="text-white leading-relaxed text-xs font-medium">{issue.description}</p>
+            <p className="text-white leading-relaxed text-xs font-medium">{issue.description || issue.message}</p>
             {issue.actionRequired && (
                 <div className="text-xs text-white font-semibold pt-1 border-t border-white/10 flex items-center gap-1">
                     <span className="text-amber-300 font-bold">Action:</span> {issue.actionRequired}
+                </div>
+            )}
+            {issue.evidence && issue.evidence.length > 0 && (
+                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                    <p className="text-[10px] font-bold text-white/70 uppercase">Supporting Evidence</p>
+                    {issue.evidence.map((item, idx) => (
+                        <EvidenceSnippetRow key={idx} source={item.source} text={item.text} score={item.similarity_score} />
+                    ))}
                 </div>
             )}
         </div>
