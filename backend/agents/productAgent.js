@@ -42,12 +42,34 @@ function identifyMarketplace(url) {
 
 function detectCurrency(marketplace, url) {
   const lower = url.toLowerCase();
-  if (lower.includes('.co.uk') || lower.includes('/en-gb')) return 'GBP';
-  if (lower.includes('.de') || lower.includes('.fr') || lower.includes('.es') || lower.includes('.it')) return 'EUR';
-  if (lower.includes('.cn') || lower.includes('.taobao') || lower.includes('aliexpress')) return 'USD';
-  if (lower.includes('.jp') || lower.includes('.co.jp')) return 'JPY';
-  if (lower.includes('.com.au')) return 'AUD';
-  if (lower.includes('.ca') && !lower.includes('local')) return 'CAD';
+  if (lower.includes('.co.uk') || lower.includes('/en-gb') || lower.includes('amazon.co.uk') || lower.includes('ebay.co.uk')) return 'GBP';
+  if (lower.includes('.de') || lower.includes('.fr') || lower.includes('.es') || lower.includes('.it') || lower.includes('.nl') || lower.includes('.eu') || lower.includes('.be') || lower.includes('.at') || lower.includes('.pt') || lower.includes('.fi') || lower.includes('.ie') || lower.includes('.gr')) return 'EUR';
+  if (lower.includes('.co.jp') || lower.includes('.jp') || lower.includes('amazon.co.jp')) return 'JPY';
+  if (lower.includes('.cn') || lower.includes('taobao.com') || lower.includes('1688.com') || lower.includes('tmall.com')) return 'CNY';
+  if (lower.includes('.com.au') || lower.includes('amazon.com.au')) return 'AUD';
+  if (lower.includes('.ca') || lower.includes('amazon.ca')) return 'CAD';
+  if (lower.includes('.co.kr') || lower.includes('.kr') || lower.includes('coupang.com')) return 'KRW';
+  if (lower.includes('.com.sg') || lower.includes('.sg') || lower.includes('shopee.sg') || lower.includes('lazada.sg')) return 'SGD';
+  if (lower.includes('.com.hk') || lower.includes('.hk')) return 'HKD';
+  if (lower.includes('.com.tw') || lower.includes('.tw')) return 'TWD';
+  if (lower.includes('amazon.ae') || lower.includes('.ae') || lower.includes('noon.com')) return 'AED';
+  if (lower.includes('amazon.sa') || lower.includes('.sa')) return 'SAR';
+  if (lower.includes('.com.br') || lower.includes('.br')) return 'BRL';
+  if (lower.includes('.com.mx') || lower.includes('.mx')) return 'MXN';
+  if (lower.includes('.com.tr') || lower.includes('.tr')) return 'TRY';
+  if (lower.includes('.ch')) return 'CHF';
+  if (lower.includes('.se')) return 'SEK';
+  if (lower.includes('.no')) return 'NOK';
+  if (lower.includes('.dk')) return 'DKK';
+  if (lower.includes('.pl')) return 'PLN';
+  if (lower.includes('.cz')) return 'CZK';
+  if (lower.includes('.hu')) return 'HUF';
+  if (lower.includes('.my') || lower.includes('shopee.com.my')) return 'MYR';
+  if (lower.includes('.th') || lower.includes('shopee.co.th')) return 'THB';
+  if (lower.includes('.vn') || lower.includes('shopee.vn')) return 'VND';
+  if (lower.includes('.ph') || lower.includes('shopee.ph')) return 'PHP';
+  if (lower.includes('.co.id') || lower.includes('.id')) return 'IDR';
+
   const map = {
     'Amazon UK': 'GBP', 'Amazon DE': 'EUR', 'Amazon CA': 'CAD', 'Amazon AU': 'AUD',
     'eBay UK': 'GBP',
@@ -57,33 +79,58 @@ function detectCurrency(marketplace, url) {
 
 function detectCountry(marketplace, url) {
   const lower = url.toLowerCase();
-  if (lower.includes('aliexpress') || lower.includes('.cn') || lower.includes('shein') || lower.includes('temu') || lower.includes('alibaba')) return 'China';
+  if (lower.includes('aliexpress') || lower.includes('.cn') || lower.includes('shein') || lower.includes('temu') || lower.includes('alibaba') || lower.includes('taobao') || lower.includes('1688')) return 'China';
   if (lower.includes('.co.uk') || lower.includes('amazon.co.uk') || lower.includes('ebay.co.uk')) return 'UK';
   if (lower.includes('.de')) return 'Germany';
+  if (lower.includes('.fr')) return 'France';
+  if (lower.includes('.it')) return 'Italy';
+  if (lower.includes('.es')) return 'Spain';
   if (lower.includes('.jp') || lower.includes('.co.jp')) return 'Japan';
-  if (lower.includes('.com.au')) return 'Australia';
-  if (lower.includes('.kr')) return 'South Korea';
-  if (lower.includes('samsung.com')) return 'South Korea';
+  if (lower.includes('.com.au') || lower.includes('amazon.com.au')) return 'Australia';
+  if (lower.includes('.ca') || lower.includes('amazon.ca')) return 'Canada';
+  if (lower.includes('.kr') || lower.includes('samsung.com') || lower.includes('coupang')) return 'South Korea';
+  if (lower.includes('.sg') || lower.includes('shopee.sg')) return 'Singapore';
+  if (lower.includes('.ae') || lower.includes('amazon.ae') || lower.includes('noon.com')) return 'UAE';
+  if (lower.includes('.sa') || lower.includes('amazon.sa')) return 'Saudi Arabia';
+  if (lower.includes('.tw')) return 'Taiwan';
+  if (lower.includes('.hk')) return 'Hong Kong';
+  if (lower.includes('.my')) return 'Malaysia';
+  if (lower.includes('.th')) return 'Thailand';
+  if (lower.includes('.vn')) return 'Vietnam';
+  if (lower.includes('.ph')) return 'Philippines';
+  if (lower.includes('.id')) return 'Indonesia';
+  if (lower.includes('.br')) return 'Brazil';
+  if (lower.includes('.mx')) return 'Mexico';
+  if (lower.includes('.tr')) return 'Turkey';
   if (marketplace === 'iHerb') return 'US';
   return 'US';
 }
 
 // ─── Currency Symbol → Code ───────────────────────────────────
 const CURRENCY_SYMBOLS = {
-  '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR',
-  '₩': 'KRW', 'A$': 'AUD', 'C$': 'CAD', 'HK$': 'HKD', 'S$': 'SGD',
-  'Fr': 'CHF', 'kr': 'SEK', 'NZ$': 'NZD', 'R$': 'BRL', '₺': 'TRY',
-  'د.إ': 'AED', '﷼': 'SAR', 'RM': 'MYR', '฿': 'THB', '₱': 'PHP',
-  'Rp': 'IDR', 'zł': 'PLN', 'Kč': 'CZK', 'Ft': 'HUF', 'lei': 'RON',
-  'CN¥': 'CNY', 'CNY': 'CNY', 'USD': 'USD', 'EUR': 'EUR', 'GBP': 'GBP',
+  'A$': 'AUD', 'C$': 'CAD', 'HK$': 'HKD', 'S$': 'SGD', 'NT$': 'TWD', 'NZ$': 'NZD',
+  'R$': 'BRL', 'CN¥': 'CNY', 'RMB': 'CNY', 'RM': 'MYR', 'د.إ': 'AED', '﷼': 'SAR',
+  '€': 'EUR', '£': 'GBP', '₹': 'INR', '₩': 'KRW', 'Fr': 'CHF', 'kr': 'SEK',
+  '₺': 'TRY', '฿': 'THB', '₱': 'PHP', 'Rp': 'IDR', 'zł': 'PLN', 'Kč': 'CZK',
+  'Ft': 'HUF', 'lei': 'RON', '¥': 'JPY', '$': 'USD',
+  'USD': 'USD', 'EUR': 'EUR', 'GBP': 'GBP', 'JPY': 'JPY', 'CNY': 'CNY',
+  'AUD': 'AUD', 'CAD': 'CAD', 'HKD': 'HKD', 'SGD': 'SGD', 'CHF': 'CHF',
+  'KRW': 'KRW', 'AED': 'AED', 'SAR': 'SAR', 'MYR': 'MYR', 'THB': 'THB',
+  'PHP': 'PHP', 'IDR': 'IDR', 'BRL': 'BRL', 'TRY': 'TRY', 'MXN': 'MXN',
+  'VND': 'VND', 'SEK': 'SEK', 'NOK': 'NOK', 'DKK': 'DKK', 'PLN': 'PLN',
 };
 
 function extractCurrencyFromText(text) {
   for (const [sym, code] of Object.entries(CURRENCY_SYMBOLS)) {
+    if (sym.length > 1 && text.includes(sym)) return code;
+  }
+  const m = text.match(/\b(USD|EUR|GBP|JPY|CNY|AUD|CAD|HKD|SGD|CHF|KRW|INR|AED|SAR|MYR|THB|PHP|IDR|BRL|TRY|MXN|VND|SEK|NOK|DKK|PLN|CZK|HUF|NZD|ZAR|QAR|KWD)\b/i);
+  if (m) return m[1].toUpperCase();
+
+  for (const [sym, code] of Object.entries(CURRENCY_SYMBOLS)) {
     if (text.includes(sym)) return code;
   }
-  const m = text.match(/\b(USD|EUR|GBP|JPY|CNY|AUD|CAD|HKD|SGD|CHF|KRW|INR|AED|SAR|MYR|THB|PHP|IDR|BRL|TRY|MXN)\b/);
-  return m ? m[1] : null;
+  return null;
 }
 
 // ─── Category Detection ──────────────────────────────────────
@@ -251,13 +298,14 @@ function cleanPrice(str) {
   if (!str) return null;
   // Strip all except digits, dot, comma
   const cleaned = str.replace(/[^\d.,]/g, '');
+  if (!cleaned) return null;
   // Handle European format (1.234,56 → 1234.56)
   const isEuropean = /^\d{1,3}(\.\d{3})+(,\d{2})?$/.test(cleaned);
   const normalized = isEuropean
     ? cleaned.replace(/\./g, '').replace(',', '.')
     : cleaned.replace(/,/g, '');
   const val = parseFloat(normalized);
-  return (val > 0 && val < 1000000) ? val : null;
+  return (val > 0 && val < 100000000) ? val : null;
 }
 
 // ─── Scraping Functions ──────────────────────────────────────
