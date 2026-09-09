@@ -91,8 +91,13 @@ export default function ResultsDashboard({ data, onReset }) {
             {/* Recommendation Banner */}
             <div className={`glass-card p-6 mb-6 animate-fade-in`}
                 style={{
-                    background: isImportBetter ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                    borderColor: isImportBetter ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'
+                    background: isImportBetter
+                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.35) 100%)'
+                        : 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(153, 27, 27, 0.4) 100%)',
+                    borderColor: isImportBetter ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+                    boxShadow: isImportBetter
+                        ? '0 0 25px rgba(16, 185, 129, 0.15)'
+                        : '0 0 25px rgba(239, 68, 68, 0.2)'
                 }}>
                 <div className="flex flex-col md:flex-row items-center gap-6">
                     <div className="flex-1">
@@ -102,10 +107,10 @@ export default function ResultsDashboard({ data, onReset }) {
                         <p className="text-white text-base leading-relaxed font-medium">{recData.reason}</p>
                         <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-black"
                             style={{
-                                background: isImportBetter ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)',
-                                color: isImportBetter ? '#a7f3d0' : '#fef08a',
-                                border: `1px solid ${isImportBetter ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'}`,
-                                textShadow: `0 0 10px ${isImportBetter ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'}`
+                                background: isImportBetter ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+                                color: isImportBetter ? '#a7f3d0' : '#fecaca',
+                                border: `1px solid ${isImportBetter ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                                textShadow: `0 0 10px ${isImportBetter ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
                             }}>
                             {recData.savingsText}
                         </div>

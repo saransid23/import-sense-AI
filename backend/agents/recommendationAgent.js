@@ -45,7 +45,7 @@ function getScoreLabel(score) {
     if (score >= 80) return { label: 'Excellent deal to import!', color: '#10b981' };
     if (score >= 65) return { label: 'Good deal to import', color: '#22c55e' };
     if (score >= 50) return { label: 'Marginal — consider carefully', color: '#f59e0b' };
-    if (score >= 35) return { label: 'Not recommended to import', color: '#f97316' };
+    if (score >= 35) return { label: 'Not recommended to import', color: '#ef4444' };
     if (score <= 5) return { label: 'Import PROHIBITED by law', color: '#dc2626' };
     return { label: 'Strongly advise buying locally', color: '#ef4444' };
 }
