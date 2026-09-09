@@ -42,5 +42,8 @@ python-dotenv
 aiohttp
 asyncio-throttle
 
+# LLM integration
+anthropic
+
 # Monitoring & Logging
 structlog

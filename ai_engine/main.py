@@ -14,6 +14,7 @@ import structlog
 
 from core.knowledge_base import warm_all_knowledge_bases
 from core.feedback_loop import get_feedback_loop
+from core.emerald_chat import answer as emerald_answer
 
 # Import all 7 agents
 from agents import (
@@ -59,6 +60,11 @@ class FeedbackRequest(BaseModel):
     outcome: str                        # approved, rejected, flagged, incorrect_classification
     actual_level: Optional[str] = None
     notes: Optional[str] = ""
+
+class ChatRequest(BaseModel):
+    question: str
+    analysis_context: Optional[dict] = {}
+    history: Optional[list[dict]] = []
 
 
 # ─── Endpoints ────────────────────────────────────────────────
@@ -154,4 +160,30 @@ def get_stats():
         "success": True,
         "knowledge_bases": stats,
         "feedback_loop": get_feedback_loop().summary(),
+    }
+
+@app.post("/api/v1/chat")
+async def chat_with_emerald(req: ChatRequest):
+    """
+    Result-scoped AI Chatbot (Emerald).
+    Answers questions grounded in the current product analysis, FAISS retrieval, and site glossary.
+    """
+    question = req.question.strip() if req.question else ""
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+    
+    # Input validation / abuse guard caps
+    if len(question) > 500:
+        question = question[:500]
+
+    # Cap conversation history to last 6 turns
+    history = req.history[-6:] if req.history else []
+
+    res = await emerald_answer(question, req.analysis_context or {}, history)
+    return {
+        "success": True,
+        "answer": res.get("answer", ""),
+        "sources_used": res.get("sources_used", []),
+        "llm_available": res.get("llm_available", False),
+        "out_of_scope": res.get("out_of_scope", False),
     }

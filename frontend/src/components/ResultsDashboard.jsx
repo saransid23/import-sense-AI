@@ -2,6 +2,7 @@ import { useState } from 'react';
 import IntelligenceScore from './IntelligenceScore';
 import CostBreakdownChart from './CostBreakdownChart';
 import PriceComparisonChart from './PriceComparisonChart';
+import EmeraldChat from './EmeraldChat';
 
 function formatINR(value) {
     if (value == null) return 'N/A';
@@ -409,6 +410,9 @@ export default function ResultsDashboard({ data, onReset }) {
                     </div>
                 </div>
             </div>
+
+            {/* Emerald AI Assistant */}
+            <EmeraldChat data={data} />
 
             {/* Footer */}
             <footer className="text-center text-xs font-semibold text-white/90 py-8">
