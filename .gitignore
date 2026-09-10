@@ -35,3 +35,11 @@ build/
 
 # Archives
 *.zip
+
+# Runtime / Local Cache Data
+data/
+ai_engine/data/scraper_cache/
+ai_engine/data/feedback/
+*.db
+*.db-shm
+*.db-wal

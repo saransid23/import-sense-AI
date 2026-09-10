@@ -120,15 +120,70 @@ const CURRENCY_SYMBOLS = {
   'VND': 'VND', 'SEK': 'SEK', 'NOK': 'NOK', 'DKK': 'DKK', 'PLN': 'PLN',
 };
 
-function extractCurrencyFromText(text) {
-  for (const [sym, code] of Object.entries(CURRENCY_SYMBOLS)) {
-    if (sym.length > 1 && text.includes(sym)) return code;
-  }
-  const m = text.match(/\b(USD|EUR|GBP|JPY|CNY|AUD|CAD|HKD|SGD|CHF|KRW|INR|AED|SAR|MYR|THB|PHP|IDR|BRL|TRY|MXN|VND|SEK|NOK|DKK|PLN|CZK|HUF|NZD|ZAR|QAR|KWD)\b/i);
-  if (m) return m[1].toUpperCase();
+// ─── Currencies using comma as decimal separator ─────────────
+// (dot = thousands, comma = decimal)
+const COMMA_DECIMAL_CURRENCIES = new Set([
+  'EUR', 'TRY', 'PLN', 'CZK', 'HUF', 'RON', 'RUB', 'UAH', 'SEK', 'NOK', 'DKK',
+  'BRL', 'ARS', 'CLP', 'COP', 'IDR', 'VND',
+]);
 
+// ─── Symbols shared by multiple currencies ───────────────────
+// For these, domain/URL signal should override the symbol-table default
+const AMBIGUOUS_SYMBOLS = new Set(['$', '¥', 'kr', 'Fr']);
+
+/**
+ * Resolve a currency symbol to an ISO code, using domain context
+ * to disambiguate shared symbols like '$'.
+ *
+ * Priority:
+ *   1. Unambiguous symbols (₹, £, ₺, ₩, etc.) → direct lookup, always wins
+ *   2. Explicit 3-letter ISO code on page → always wins
+ *   3. Ambiguous symbols ($, ¥, kr, Fr) → domain-derived currency wins
+ *   4. Fall back to CURRENCY_SYMBOLS table default
+ */
+function resolveSymbolCurrency(symbol, marketplace, url) {
+  if (!symbol) return null;
+  const trimmed = symbol.trim();
+
+  // Explicit 3-letter ISO code — always authoritative
+  if (/^[A-Z]{3}$/i.test(trimmed)) return trimmed.toUpperCase();
+
+  const tableCurrency = CURRENCY_SYMBOLS[trimmed];
+
+  // Unambiguous symbol — trust the table
+  if (tableCurrency && !AMBIGUOUS_SYMBOLS.has(trimmed)) return tableCurrency;
+
+  // Ambiguous symbol — prefer domain signal over table default
+  if (AMBIGUOUS_SYMBOLS.has(trimmed)) {
+    const domainCurrency = detectCurrency(marketplace, url);
+    // Only use domain currency if it's more specific than the generic default
+    if (domainCurrency && domainCurrency !== 'USD') return domainCurrency;
+    // If domain also says USD (or no signal), fall through to table
+    return tableCurrency || domainCurrency || 'USD';
+  }
+
+  return tableCurrency || null;
+}
+
+/**
+ * Safe currency detection from text — symbols only, NO 3-letter code word-scan.
+ *
+ * 3-letter codes like TRY, ALL, COP etc. collide with common English words
+ * ("Try Prime", "All items", "Cop this look"). They're only trustworthy in
+ * structured fields (JSON-LD priceCurrency, meta tags) or directly adjacent
+ * to a price in the heuristic regex — never from a general page-text scan.
+ *
+ * @param {string} text - Small text window near a price, NOT the whole page
+ */
+function extractCurrencySymbolNearContext(text) {
+  if (!text) return null;
+  // Multi-char symbols first (most specific): A$, HK$, NT$, R$, CN¥, RM, Rp, zł, Kč, etc.
   for (const [sym, code] of Object.entries(CURRENCY_SYMBOLS)) {
-    if (text.includes(sym)) return code;
+    if (sym.length > 1 && !/^[A-Z]{3}$/i.test(sym) && text.includes(sym)) return code;
+  }
+  // Single-char non-letter symbols: €, £, ¥, ₹, ₺, ₩, ₱, ฿, $
+  for (const [sym, code] of Object.entries(CURRENCY_SYMBOLS)) {
+    if (sym.length === 1 && !/[A-Za-z]/.test(sym) && text.includes(sym)) return code;
   }
   return null;
 }
@@ -286,6 +341,40 @@ function buildFullIdentity(brand, model, storage, color, variant, fallbackName) 
   return parts.length > 0 ? parts.join(' ') : fallbackName;
 }
 
+// ─── Price Plausibility Check ────────────────────────────────
+// Approximate rates to USD for order-of-magnitude checking only.
+// Doesn't need to be precise — just catches $2 laptops and similar nonsense.
+const APPROXIMATE_USD_RATES = {
+  USD: 1, EUR: 1.08, GBP: 1.27, JPY: 0.0067, CHF: 1.13, CAD: 0.74,
+  AUD: 0.65, NZD: 0.60, CNY: 0.14, HKD: 0.13, SGD: 0.75, KRW: 0.00076,
+  SEK: 0.095, NOK: 0.094, DKK: 0.145, INR: 0.012,
+  AED: 0.27, SAR: 0.27, QAR: 0.27, KWD: 3.26, BHD: 2.65, OMR: 2.60,
+  TRY: 0.031, EGP: 0.021, ZAR: 0.055, ILS: 0.27,
+  THB: 0.028, VND: 0.000040, IDR: 0.000064, PHP: 0.018, MYR: 0.22,
+  TWD: 0.031, BRL: 0.20, MXN: 0.058, ARS: 0.0011,
+  PLN: 0.25, CZK: 0.044, HUF: 0.0028, RON: 0.22,
+  RUB: 0.011, UAH: 0.024, PKR: 0.0036,
+};
+
+const MIN_PLAUSIBLE_PRICE_USD = {
+  Electronics: 15, Footwear: 8, Clothing: 5, Supplements: 5, Health: 5,
+  Beauty: 3, Accessories: 5, Sports: 5, Books: 3, Toys: 3,
+  HomeAppliances: 15, Other: 3,
+};
+
+/**
+ * Check whether a price makes sense for the given category.
+ * Rejects obviously-wrong values (e.g. $2 for a laptop) that would
+ * otherwise show a confident result with a nonsense price.
+ */
+function isPricePlausible(price, currency, category) {
+  if (!price || price <= 0) return false;
+  const rateToUSD = APPROXIMATE_USD_RATES[(currency || 'USD').toUpperCase()] || 0.05;
+  const priceInUSD = price * rateToUSD;
+  const minPrice = MIN_PLAUSIBLE_PRICE_USD[category] || MIN_PLAUSIBLE_PRICE_USD.Other;
+  return priceInUSD >= minPrice;
+}
+
 // ─── HTML Utilities ──────────────────────────────────────────
 function decodeHTMLEntities(text) {
   return (text || '')
@@ -294,16 +383,37 @@ function decodeHTMLEntities(text) {
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).trim();
 }
 
-function cleanPrice(str) {
+/**
+ * Parse a price string into a number, using the currency's conventional
+ * number format to disambiguate dot vs comma as decimal/thousands.
+ *
+ * @param {string} str   - Raw price string (e.g. "1.234,56", "1,234.56", "1 234,56")
+ * @param {string} [currencyHint] - ISO-4217 code to guide format detection
+ */
+function cleanPrice(str, currencyHint) {
   if (!str) return null;
-  // Strip all except digits, dot, comma
-  const cleaned = str.replace(/[^\d.,]/g, '');
+
+  // Strip everything except digits, dots, commas, spaces, apostrophes
+  let cleaned = str.replace(/[^\d.,'\ \u00A0\u202F]/g, '').trim();
   if (!cleaned) return null;
-  // Handle European format (1.234,56 → 1234.56)
-  const isEuropean = /^\d{1,3}(\.\d{3})+(,\d{2})?$/.test(cleaned);
-  const normalized = isEuropean
-    ? cleaned.replace(/\./g, '').replace(',', '.')
-    : cleaned.replace(/,/g, '');
+
+  // Strip space and apostrophe thousand separators — never decimal in practice
+  cleaned = cleaned.replace(/[\s'\u00A0\u202F]/g, '');
+
+  if (!cleaned) return null;
+
+  const useCommaDecimal = currencyHint && COMMA_DECIMAL_CURRENCIES.has(currencyHint.toUpperCase());
+
+  let normalized;
+  if (useCommaDecimal) {
+    // dot = thousands, comma = decimal  (e.g. 1.234,56 → 1234.56)
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    // comma = thousands, dot = decimal  (e.g. 1,234.56 → 1234.56)
+    // Also handles Indian grouping (1,23,456.78) since we just strip all commas
+    normalized = cleaned.replace(/,/g, '');
+  }
+
   const val = parseFloat(normalized);
   return (val > 0 && val < 100000000) ? val : null;
 }
@@ -387,12 +497,13 @@ function extractFromJSONLD(html) {
       if (offers && !result.price) {
         const offer = Array.isArray(offers) ? offers[0] : offers;
         if (offer) {
+          // Extract currency first so cleanPrice can use it for format detection
+          if (offer.priceCurrency) result.currency = offer.priceCurrency.toUpperCase();
           const rawPrice = offer.price ?? offer.lowPrice;
           if (rawPrice != null) {
-            const p = cleanPrice(String(rawPrice));
+            const p = cleanPrice(String(rawPrice), result.currency);
             if (p) result.price = p;
           }
-          if (offer.priceCurrency) result.currency = offer.priceCurrency.toUpperCase();
           if (offer.shippingDetails) {
             const shipping = offer.shippingDetails;
             if (shipping.shippingRate?.value) result.shippingPrice = parseFloat(shipping.shippingRate.value);
@@ -428,12 +539,12 @@ function extractFromMetaTags(html) {
   result.image = meta('og:image') || meta('twitter:image');
   result.description = meta('og:description') || meta('description');
 
-  // Price meta tags
-  const priceAmt = meta('product:price:amount') || meta('og:price:amount');
-  if (priceAmt) result.price = cleanPrice(priceAmt);
-
+  // Price meta tags — extract currency first so cleanPrice can use it
   const priceCur = meta('product:price:currency') || meta('og:price:currency');
   if (priceCur) result.currency = priceCur.toUpperCase();
+
+  const priceAmt = meta('product:price:amount') || meta('og:price:amount');
+  if (priceAmt) result.price = cleanPrice(priceAmt, result.currency);
 
   // Clean blog/site names from title
   if (result.name) {
@@ -469,6 +580,9 @@ function extractFromMarketplaceSelectors(html, marketplace) {
     const title = byId('productTitle');
     if (title) result.name = title.trim();
 
+    // Currency hint for this marketplace (Amazon regional stores use locale-specific currency)
+    const amazonCurrencyHint = detectCurrency(marketplace, '');
+
     // Price: .a-price .a-offscreen  OR  #priceblock_ourprice
     const pricePatterns = [
       /"priceAmount"\s*:\s*"([\d.]+)"/,
@@ -482,7 +596,7 @@ function extractFromMarketplaceSelectors(html, marketplace) {
     for (const pat of pricePatterns) {
       const m = html.match(pat);
       if (m) {
-        const p = cleanPrice(m[1]);
+        const p = cleanPrice(m[1], amazonCurrencyHint);
         if (p && !result.price) { result.price = p; break; }
       }
     }
@@ -495,19 +609,20 @@ function extractFromMarketplaceSelectors(html, marketplace) {
 
   // ── EBAY ──
   else if (marketplace.startsWith('eBay')) {
+    // Currency — extract first so cleanPrice can use it
+    const ebayCur = html.match(/itemprop=["']priceCurrency["'][^>]*content=["']([A-Z]{3})["']/i);
+    if (ebayCur) result.currency = ebayCur[1].toUpperCase();
+    const ebayCurrencyHint = result.currency || detectCurrency(marketplace, '');
+
     // Price: #prcIsum or .x-price-primary
     const ebayPrice = html.match(/id=["']prcIsum["'][^>]*content=["']([^"']+)["']/i)
       || html.match(/itemprop=["']price["'][^>]*content=["']([^"']+)["']/i)
       || html.match(/class=["'][^"']*x-price-primary[^"']*["'][^>]*>([\$£€¥\d,. ]+)/i);
-    if (ebayPrice) result.price = cleanPrice(ebayPrice[1]);
+    if (ebayPrice) result.price = cleanPrice(ebayPrice[1], ebayCurrencyHint);
 
     const ebayTitle = html.match(/id=["']itemTitle["'][^>]*>[^:]+:\s*([^<]{1,200})/i)
       || html.match(/class=["'][^"']*x-item-title[^"']*["'][^>]*>([^<]{1,200})/i);
     if (ebayTitle) result.name = decodeHTMLEntities(ebayTitle[1]).trim();
-
-    // Currency
-    const ebayCur = html.match(/itemprop=["']priceCurrency["'][^>]*content=["']([A-Z]{3})["']/i);
-    if (ebayCur) result.currency = ebayCur[1];
   }
 
   // ── ALIEXPRESS ──
@@ -517,7 +632,7 @@ function extractFromMarketplaceSelectors(html, marketplace) {
       || html.match(/"formatedPrice"\s*:\s*"([^"]+)"/i)
       || html.match(/class=["'][^"']*product-price-value[^"']*["'][^>]*>([\d.]+)/i)
       || html.match(/"minAmount"\s*:\s*\{"value"\s*:\s*([\d.]+)/i);
-    if (aliPrice) result.price = cleanPrice(aliPrice[1]);
+    if (aliPrice) result.price = cleanPrice(aliPrice[1], 'USD');
 
     const aliTitle = html.match(/"subject"\s*:\s*"([^"]{5,300})"/i)
       || html.match(/class=["'][^"']*product-title[^"']*["'][^>]*>([^<]{5,200})/i);
@@ -534,7 +649,7 @@ function extractFromMarketplaceSelectors(html, marketplace) {
     const sheinPrice = html.match(/class=["'][^"']*product-intro__head-price[^"']*["'][^>]*>[^<]*\$([\d.]+)/i)
       || html.match(/"salePrice"\s*:\s*\{"amount"\s*:\s*"([\d.]+)"/i)
       || html.match(/"retailPrice"\s*:\s*\{"amount"\s*:\s*"([\d.]+)"/i);
-    if (sheinPrice) result.price = cleanPrice(sheinPrice[1]);
+    if (sheinPrice) result.price = cleanPrice(sheinPrice[1], 'USD');
 
     const sheinTitle = html.match(/class=["'][^"']*product-intro__head-name[^"']*["'][^>]*>([^<]{5,200})/i);
     if (sheinTitle) result.name = decodeHTMLEntities(sheinTitle[1]).trim();
@@ -544,21 +659,21 @@ function extractFromMarketplaceSelectors(html, marketplace) {
   else if (marketplace === 'iHerb') {
     const iherbPrice = html.match(/"priceValue"\s*:\s*([\d.]+)/i)
       || html.match(/class=["'][^"']*price[^"']*["'][^>]*>\$?([\d.]+)/i);
-    if (iherbPrice) result.price = cleanPrice(iherbPrice[1]);
+    if (iherbPrice) result.price = cleanPrice(iherbPrice[1], 'USD');
   }
 
   // ── TEMU ──
   else if (marketplace === 'Temu') {
     const temuPrice = html.match(/"originalPrice"\s*:\s*([\d.]+)/i)
       || html.match(/"displayPrice"\s*:\s*([\d.]+)/i);
-    if (temuPrice) result.price = cleanPrice(temuPrice[1]);
+    if (temuPrice) result.price = cleanPrice(temuPrice[1], 'USD');
   }
 
   // ── WALMART ──
   else if (marketplace === 'Walmart') {
     const walPrice = html.match(/"price"\s*:\s*([\d.]+)/i)
       || html.match(/\$\s*([\d,]+\.?\d*)/);
-    if (walPrice) result.price = cleanPrice(walPrice[1]);
+    if (walPrice) result.price = cleanPrice(walPrice[1], 'USD');
   }
 
   return Object.keys(result).filter(k => result[k]).length > 0 ? result : null;
@@ -566,21 +681,51 @@ function extractFromMarketplaceSelectors(html, marketplace) {
 
 /**
  * STEP 4 — Intelligent Price Heuristics (fallback)
- * Finds the most likely product price using page-level patterns
+ * Finds the most likely product price using page-level patterns.
+ * Uses the full CURRENCY_SYMBOLS table dynamically — no separate hardcoded list.
  */
-function extractPriceHeuristic(html, preferredCurrency) {
-  // Pattern: currency symbol followed by number, near buy/cart
-  const currencySymbolMap = { '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₩': 'KRW', '₹': 'INR' };
 
-  // Extract all prices from page
-  const priceRegex = /(?:[\$€£¥₹₩]|USD|EUR|GBP|CNY)\s*([\d,]+(?:\.\d{1,2})?)/g;
+// Build the symbol part of the regex dynamically from CURRENCY_SYMBOLS
+// Filter out 3-letter ISO codes (handled by a separate \b[A-Z]{3}\b group),
+// keep only actual symbols, and sort longest-first so "HK$" matches before "$"
+const ALL_CURRENCY_SYMBOLS = Object.keys(CURRENCY_SYMBOLS)
+  .filter(s => !/^[A-Z]{3}$/.test(s))
+  .sort((a, b) => b.length - a.length);
+
+const ESCAPED_SYMBOLS = ALL_CURRENCY_SYMBOLS
+  .map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+
+// All known 3-letter ISO codes for the heuristic regex.
+// These are safe here because they're matched directly adjacent to price digits,
+// not as floating words anywhere on the page.
+const ISO_CODES_FOR_REGEX = [
+  'USD','EUR','GBP','JPY','CNY','AUD','CAD','HKD','SGD','CHF',
+  'KRW','AED','SAR','MYR','THB','PHP','IDR','BRL','TRY','MXN',
+  'VND','SEK','NOK','DKK','PLN','CZK','HUF','NZD','ZAR','QAR',
+  'KWD','RON','TWD','RUB','UAH','INR','PKR','BDT','LKR','NPR',
+  'EGP','ILS','NGN','KES','PEN','COP','CLP','ARS',
+].join('|');
+
+// Use word boundary on the ISO code side so "TRY" only matches when it's
+// a standalone code adjacent to digits, not embedded in "Try Prime" etc.
+const HEURISTIC_PRICE_REGEX = new RegExp(
+  `(?:${ESCAPED_SYMBOLS}|\\b(?:${ISO_CODES_FOR_REGEX})\\b)\\s*([\\d,.\\s'\\u00A0]+)`,
+  'g'
+);
+
+function extractPriceHeuristic(html, preferredCurrency, marketplace, url) {
   const allPrices = [];
   let m;
-  while ((m = priceRegex.exec(html)) !== null) {
-    const sym = m[0].replace(/[\d,. ]/g, '').trim();
-    const val = cleanPrice(m[1]);
-    const cur = currencySymbolMap[sym] || extractCurrencyFromText(sym) || preferredCurrency || 'USD';
-    if (val && val > 0 && val < 100000) {
+  // Reset lastIndex in case the regex was used before
+  HEURISTIC_PRICE_REGEX.lastIndex = 0;
+
+  while ((m = HEURISTIC_PRICE_REGEX.exec(html)) !== null) {
+    const sym = m[0].replace(/[\d,.\s'\u00A0]/g, '').trim();
+    // Resolve the symbol to an ISO code, using domain context for ambiguous symbols
+    const cur = resolveSymbolCurrency(sym, marketplace || '', url || '') || preferredCurrency || 'USD';
+    const val = cleanPrice(m[1], cur);
+    if (val && val > 0 && val < 100000000) {
       // Score this price — prices near buy/add-to-cart context get higher weight
       const contextStart = Math.max(0, m.index - 200);
       const contextEnd = Math.min(html.length, m.index + 200);
@@ -767,16 +912,63 @@ async function productAgent(url) {
   const shippingPrice = jsonLD?.shippingPrice ?? extractShipping(html);
   const skuFromLD = jsonLD?.sku || jsonLD?.mpn;
 
-  // Detect currency if still missing
+  // ── Fix 1: Detect currency — domain signal wins over text-symbol scan ──
+  // Never scan raw page text for 3-letter codes ("Try Prime" → TRY disaster).
+  // Only use symbol-based detection on a small window near the price, not the whole page.
+  const domainCurrency = detectCurrency(marketplace, url);
   if (!currency) {
-    currency = extractCurrencyFromText(name + ' ' + (html.substring(0, 5000)))
-      || detectCurrency(marketplace, url);
+    // Try symbol detection on a small text sample (title area, not full HTML)
+    const symbolCurrency = extractCurrencySymbolNearContext(
+      (name || '') + ' ' + (html.substring(0, 500))
+    );
+    // Domain wins by default; symbol only overrides if it's unambiguous
+    if (symbolCurrency && !AMBIGUOUS_SYMBOLS.has(
+      Object.entries(CURRENCY_SYMBOLS).find(([, c]) => c === symbolCurrency)?.[0] || ''
+    )) {
+      currency = symbolCurrency;
+    } else {
+      currency = domainCurrency;
+    }
+  }
+
+  // Disambiguate currency if it came from an ambiguous symbol
+  // Domain-derived currency should win over ambiguous symbol defaults
+  if (currency) {
+    const symbolEntry = Object.entries(CURRENCY_SYMBOLS).find(([, code]) => code === currency);
+    if (symbolEntry && AMBIGUOUS_SYMBOLS.has(symbolEntry[0]) && domainCurrency && domainCurrency !== 'USD') {
+      console.log(`[ProductAgent] Disambiguating currency: ${currency} → ${domainCurrency} (domain signal)`);
+      currency = domainCurrency;
+    }
+  }
+
+  // ── Fix 1 (cont): Country/currency cross-check ──
+  const detectedCountry = detectCountry(marketplace, url);
+  const EXPECTED_CURRENCY_BY_COUNTRY = {
+    'US': 'USD', 'UK': 'GBP', 'Germany': 'EUR', 'France': 'EUR', 'Italy': 'EUR',
+    'Spain': 'EUR', 'Japan': 'JPY', 'China': 'CNY', 'Australia': 'AUD',
+    'Canada': 'CAD', 'South Korea': 'KRW', 'Singapore': 'SGD', 'Hong Kong': 'HKD',
+    'UAE': 'AED', 'Saudi Arabia': 'SAR', 'Brazil': 'BRL', 'Mexico': 'MXN',
+    'Turkey': 'TRY', 'Taiwan': 'TWD', 'Malaysia': 'MYR', 'Thailand': 'THB',
+    'Vietnam': 'VND', 'Philippines': 'PHP', 'Indonesia': 'IDR',
+  };
+  const expectedCurrency = EXPECTED_CURRENCY_BY_COUNTRY[detectedCountry];
+  let currencyMismatch = false;
+  if (expectedCurrency && currency && currency !== expectedCurrency) {
+    // Currency doesn't match what we'd expect for this country/domain
+    // If the currency came from a structured source (JSON-LD, meta tag), trust it.
+    // If it came from text heuristics, prefer the domain-expected currency.
+    const isFromStructuredSource = (jsonLD?.currency || meta?.currency || specific?.currency);
+    if (!isFromStructuredSource) {
+      console.log(`[ProductAgent] ⚠ Currency/country mismatch: ${currency} for ${detectedCountry} (expected ${expectedCurrency}) — correcting`);
+      currency = expectedCurrency;
+      currencyMismatch = true;
+    }
   }
 
   // ── 7. Heuristic fallback if no price found yet ──
   if (!price) {
     console.log(`[ProductAgent] No price from structured sources — trying heuristics...`);
-    const heuristic = extractPriceHeuristic(html, detectCurrency(marketplace, url));
+    const heuristic = extractPriceHeuristic(html, domainCurrency, marketplace, url);
     if (heuristic) {
       price = heuristic.price;
       currency = currency || heuristic.currency;
@@ -802,13 +994,32 @@ async function productAgent(url) {
   const storage = extractStorage(combined);
   const color = extractColor(combined);
 
+  // ── Fix 2: Plausibility gate — reject obviously-wrong prices ──
+  const category = detectCategory(url, name);
+  let pricePlausible = true;
+  if (price) {
+    pricePlausible = isPricePlausible(price, currency, category);
+    if (!pricePlausible) {
+      console.log(`[ProductAgent] ⚠ Price ${currency} ${price} is implausible for category "${category}" — rejecting`);
+      price = null;
+    }
+  }
+
+  // ── Confidence scoring (Fix 2: only award price points if plausible) ──
   let confidenceScore = 0;
   if (brand) confidenceScore += 25;
   if (model) confidenceScore += 25;
-  if (price) confidenceScore += 20;
+  if (price && pricePlausible) confidenceScore += 20;
   if (storage || color) confidenceScore += 15;
   if (skuFromLD) confidenceScore += 15;
-  const confidence = confidenceScore >= 65 ? 'high' : confidenceScore >= 40 ? 'medium' : 'low';
+
+  // Cap confidence if price was rejected as implausible or currency mismatched
+  let confidence;
+  if (!pricePlausible || currencyMismatch) {
+    confidence = 'low';
+  } else {
+    confidence = confidenceScore >= 65 ? 'high' : confidenceScore >= 40 ? 'medium' : 'low';
+  }
 
   const fullIdentity = buildFullIdentity(brand, model, storage, color, null, name);
   const finalName = (fullIdentity && fullIdentity !== name) ? fullIdentity : name;
@@ -816,7 +1027,14 @@ async function productAgent(url) {
   console.log(`[ProductAgent] ✓ Final: "${finalName.substring(0, 80)}" | ${currency} ${price || '?'} | ${confidence} confidence`);
 
   if (!price) {
-    console.log(`[ProductAgent] ⚠ Price not found — user will be prompted for manual input`);
+    console.log(`[ProductAgent] ⚠ Price not found or implausible — user will be prompted for manual input`);
+  }
+
+  // ── Validate final currency is a valid ISO-4217 code ──
+  let finalCurrency = (currency || 'USD').toUpperCase().trim();
+  if (!/^[A-Z]{3}$/.test(finalCurrency)) {
+    console.log(`[ProductAgent] ⚠ Invalid currency code "${finalCurrency}" — falling back to domain detection`);
+    finalCurrency = domainCurrency || 'USD';
   }
 
   return {
@@ -825,15 +1043,15 @@ async function productAgent(url) {
     data: {
       name: finalName.substring(0, 200),
       price,
-      currency: currency || 'USD',
-      category: detectCategory(url, finalName),
-      country: detectCountry(marketplace, url),
+      currency: finalCurrency,
+      category,
+      country: detectedCountry,
       marketplace,
       imageUrl: image,
       originalUrl: url,
       shippingPrice,
       priceExtracted: price !== null,
-      scrapeStatus: price ? 'success' : 'price_not_found',
+      scrapeStatus: price ? 'success' : (!pricePlausible ? 'price_implausible' : 'price_not_found'),
       identity: {
         brand,
         model,

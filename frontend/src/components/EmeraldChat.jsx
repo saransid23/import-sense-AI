@@ -187,8 +187,8 @@ export default function EmeraldChat({ data }) {
                     {/* Header */}
                     <div className="p-3.5 border-b border-white/15 flex items-center justify-between bg-emerald-950/60">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full btn-gradient flex items-center justify-center text-white font-black text-sm shadow-md">
-                                E
+                            <div className="w-9 h-9 rounded-full bg-emerald-950/80 p-1 border border-emerald-400/50 flex items-center justify-center shadow-lg shadow-emerald-950/50 overflow-hidden">
+                                <img src="/emerald-icon.png" alt="Emerald Gem" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
@@ -301,10 +301,10 @@ export default function EmeraldChat({ data }) {
                         setIsOpen(true);
                         if (showNudge) markNudgeDismissed();
                     }}
-                    className="w-14 h-14 rounded-full btn-gradient flex items-center justify-center shadow-2xl pulse-glow cursor-pointer border-2 border-emerald-300/40 text-white font-black text-xl hover:scale-105 transition-transform"
+                    className="w-14 h-14 rounded-full bg-slate-950/90 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.4)] pulse-glow cursor-pointer border-2 border-emerald-400/60 p-2.5 hover:scale-110 hover:border-emerald-300 transition-all duration-300 group"
                     title="Ask Emerald Assistant"
                 >
-                    E
+                    <img src="/emerald-icon.png" alt="Emerald Assistant" className="w-full h-full object-contain filter drop-shadow-[0_0_10px_rgba(16,185,129,0.9)] group-hover:rotate-12 transition-transform duration-300" />
                 </button>
             )}
         </div>

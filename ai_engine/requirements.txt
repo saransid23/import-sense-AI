@@ -43,7 +43,7 @@ aiohttp
 asyncio-throttle
 
 # LLM integration
-anthropic
+google-generativeai
 
 # Monitoring & Logging
 structlog

@@ -31,7 +31,7 @@ router.post('/chat', async (req, res) => {
                 analysis_context: analysis_context || {},
                 history: history || [],
             },
-            { timeout: 15000 }
+            { timeout: 45000 }
         );
 
         return res.json(response.data);

@@ -86,7 +86,17 @@ async function orchestrate(url, overrides = {}, onAgentUpdate = null) {
     pipeline.push(currencyResult);
     trackAgent('CurrencyAgent', currencyResult.success);
     if (!currencyResult.success) {
-        return { success: false, error: 'Currency conversion failed', pipeline };
+        // Graceful fallback: prompt user for manual input instead of hard-stopping
+        const elapsed = Date.now() - startTime;
+        console.log(`[Orchestrator] ⚠ Currency conversion failed for "${currency}" — requesting manual input`);
+        return {
+            success: false,
+            needsManualInput: true,
+            error: `Could not convert currency "${currency}" to INR. Please provide the price in a supported currency (e.g. USD, EUR, GBP) or directly in INR.`,
+            partialData: { name, category, country, marketplace, currency, identity },
+            analysisTime: `${elapsed}ms`,
+            agentPipeline: pipeline.map(r => ({ agent: r.agent, success: r.success })),
+        };
     }
     const { priceInINR, exchangeRate } = currencyResult.data;
 

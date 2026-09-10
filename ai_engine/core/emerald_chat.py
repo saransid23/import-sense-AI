@@ -16,12 +16,23 @@ from core.knowledge_base import get_knowledge_base
 load_dotenv()
 logger = structlog.get_logger(__name__)
 
-# Check for Anthropic SDK
+# Check for Google Generative AI SDK (google.genai & google.generativeai)
+import asyncio
+HAS_GEMINI_SDK = False
+genai_new = None
+genai_legacy = None
+
 try:
-    import anthropic
-    HAS_ANTHROPIC_SDK = True
+    from google import genai as genai_new
+    HAS_GEMINI_SDK = True
 except ImportError:
-    HAS_ANTHROPIC_SDK = False
+    pass
+
+try:
+    import google.generativeai as genai_legacy
+    HAS_GEMINI_SDK = True
+except ImportError:
+    pass
 
 
 def build_compact_context(ctx: Dict[str, Any]) -> str:
@@ -112,7 +123,7 @@ def build_compact_context(ctx: Dict[str, Any]) -> str:
 
 def generate_templated_fallback(question: str, ctx: Dict[str, Any], history: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Grounded fallback engine used when no Anthropic API key is configured.
+    Grounded fallback engine used when no Gemini API key is configured.
     Performs specific intent recognition & mathematical reasoning over real analysis data.
     Outputs clean plain text without markdown syntax.
     """
@@ -139,6 +150,32 @@ def generate_templated_fallback(question: str, ctx: Dict[str, Any], history: Lis
     best_local = int(local.get("bestPrice")) if local.get("bestPrice") else None
 
     sources_used = ["Import Analysis Context"]
+
+    # 0. Conversational Greetings & Small Talk
+    clean_q = "".join([c for c in q_lower if c.isalnum() or c.isspace()]).strip()
+    greetings = ["hi", "hello", "hey", "hlo", "hy", "hola", "namaste", "good morning", "good afternoon", "good evening", "who are you", "what can you do", "help", "how are you", "who r u", "what is your name"]
+    
+    if clean_q in greetings or any(clean_q.startswith(g + " ") for g in ["hi", "hello", "hey", "good morning", "good evening", "hlo"]):
+        sources_used.append("Emerald Conversational AI")
+        p_name = f"for {product_name}" if product_name and product_name != "this product" else "for your product"
+        return {
+            "answer": f"Hello! I'm Emerald, your AI import colleague. I've analyzed the compliance, customs duties, and local price comparisons {p_name}. How can I help you today? Ask me about cheapest buying options, duty breakdowns, risk factors, or quantity scaling!",
+            "sources_used": sources_used,
+            "llm_available": False,
+            "out_of_scope": False,
+        }
+
+    # Thanks & Polite Closings
+    thanks_phrases = ["thank you", "thanks", "thank u", "thx", "great", "awesome", "perfect", "got it", "bye", "goodbye", "ok", "okay"]
+    if clean_q in thanks_phrases or any(clean_q.startswith(t + " ") for t in ["thanks", "thank you"]):
+        sources_used.append("Emerald Conversational AI")
+        p_name = f"for {product_name}" if product_name and product_name != "this product" else "for your product"
+        return {
+            "answer": f"You're very welcome! Let me know whenever you need more import calculations or compliance checks {p_name}.",
+            "sources_used": sources_used,
+            "llm_available": False,
+            "out_of_scope": False,
+        }
 
     # 1. Glossary term lookups (direct terminology definitions)
     for term, definition in SITE_GLOSSARY.items():
@@ -354,17 +391,17 @@ def generate_templated_fallback(question: str, ctx: Dict[str, Any], history: Lis
 async def answer(question: str, analysis_context: Dict[str, Any], history: List[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Main Emerald Chat entry point.
-    Uses Anthropic Claude 3.5 Haiku if ANTHROPIC_API_KEY is available,
+    Uses Google Gemini Flash if GEMINI_API_KEY is available,
     otherwise falls back to the grounded deterministic reasoning engine.
     """
     if history is None:
         history = []
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
 
-    # If no key configured or Anthropic SDK not installed, use deterministic template engine
-    if not api_key or not HAS_ANTHROPIC_SDK or api_key == "your_anthropic_api_key_here":
-        logger.info("emerald.basic_mode", reason="No API key or SDK unavailable")
+    # Check for missing, empty, or default placeholder API key
+    if not api_key or not HAS_GEMINI_SDK or api_key in ["your-key-here", "your_key_here", "your_gemini_api_key_here", "your_anthropic_api_key_here"]:
+        logger.info("emerald.basic_mode", reason="No valid GEMINI_API_KEY or SDK unavailable")
         return generate_templated_fallback(question, analysis_context, history)
 
     try:
@@ -422,30 +459,73 @@ async def answer(question: str, analysis_context: Dict[str, Any], history: List[
             f"{kb_text}"
         )
 
-        formatted_messages = []
-        for msg in history[-6:]:
-            role = "user" if msg.get("role") == "user" else "assistant"
-            formatted_messages.append({"role": role, "content": msg.get("content", "")})
+        history_str = ""
+        if history:
+            history_lines = []
+            for msg in history[-6:]:
+                role = "User" if msg.get("role") == "user" else "Assistant"
+                history_lines.append(f"{role}: {msg.get('content', '')}")
+            history_str = "RECENT CONVERSATION HISTORY:\n" + "\n".join(history_lines) + "\n\n"
 
-        formatted_messages.append({"role": "user", "content": question})
+        prompt_context = f"{history_str}USER QUESTION: {question}"
 
-        client = anthropic.AsyncAnthropic(api_key=api_key)
-        response = await client.messages.create(
-            model="claude-3-5-haiku-20241022",
-            max_tokens=450,
-            system=system_prompt,
-            messages=formatted_messages,
-        )
+        answer_text = None
 
-        answer_text = response.content[0].text.strip()
-        logger.info("emerald.llm_success", model="claude-3-5-haiku-20241022")
+        # Attempt 1: Try new google.genai SDK
+        if genai_new is not None:
+            try:
+                client = genai_new.Client(api_key=api_key)
+                for m_name in ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]:
+                    try:
+                        res = client.models.generate_content(
+                            model=m_name,
+                            contents=prompt_context,
+                            config={"system_instruction": system_prompt, "max_output_tokens": 500}
+                        )
+                        if res and res.text:
+                            answer_text = res.text.strip()
+                            logger.info("emerald.llm_success", sdk="google.genai", model=m_name)
+                            break
+                    except Exception as err_m:
+                        logger.warning("emerald.genai_model_err", model=m_name, error=str(err_m))
+                        continue
+            except Exception as sdk_err:
+                logger.warning("emerald.genai_sdk_err", error=str(sdk_err))
 
-        return {
-            "answer": answer_text,
-            "sources_used": sources_used,
-            "llm_available": True,
-            "out_of_scope": False,
-        }
+        # Attempt 2: Try legacy google.generativeai SDK if new SDK failed
+        if not answer_text and genai_legacy is not None:
+            try:
+                genai_legacy.configure(api_key=api_key)
+                for m_name in ["gemini-2.5-flash", "gemini-1.5-flash-latest"]:
+                    try:
+                        model = genai_legacy.GenerativeModel(
+                            model_name=m_name,
+                            system_instruction=system_prompt,
+                            generation_config={"max_output_tokens": 500}
+                        )
+                        response = model.generate_content(prompt_context)
+                        if response and response.text:
+                            answer_text = response.text.strip()
+                            logger.info("emerald.llm_success", sdk="google.generativeai", model=m_name)
+                            break
+                    except Exception as leg_err:
+                        logger.warning("emerald.legacy_model_err", model=m_name, error=str(leg_err))
+                        break
+            except Exception as leg_sdk_err:
+                logger.warning("emerald.legacy_sdk_err", error=str(leg_sdk_err))
+
+        if answer_text:
+            return {
+                "answer": answer_text,
+                "sources_used": sources_used,
+                "llm_available": True,
+                "out_of_scope": False,
+            }
+        else:
+            logger.info("emerald.llm_fallback_trigger", reason="LLM API call completed via Conversational Engine")
+            fallback_res = generate_templated_fallback(question, analysis_context, history)
+            fallback_res["llm_available"] = False
+            return fallback_res
 
     except Exception as err:
         logger.error("emerald.llm_error", error=str(err))
