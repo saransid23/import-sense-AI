@@ -68,17 +68,6 @@ export default function LandingPage({ onAnalyze, error }) {
             {/* Hero Section */}
             <div className="text-center max-w-4xl mx-auto animate-fade-in relative z-10">
 
-                {/* Favicon Brand Badge */}
-                <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass-card border border-emerald-500/30 mb-8 animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                    <div className="relative w-7 h-7 flex items-center justify-center">
-                        <div className="absolute inset-0 rounded-full border border-emerald-400 border-t-transparent animate-spin" />
-                        <img src="/apple-touch-icon.png" onError={(e) => { e.target.src = '/favicon.ico'; }} alt="Favicon" className="w-5 h-5 object-contain filter drop-shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
-                    </div>
-                    <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest">
-                        ImportSense AI · Autonomous Regulatory Engine
-                    </span>
-                </div>
-
                 {/* Title */}
                 <h1 className="text-5xl md:text-7xl font-black leading-[1.1] mb-6 text-white tracking-tight">
                     Know the{' '}
