@@ -25,17 +25,17 @@ export default function FaviconPreloader({
                 {/* Counter-rotating Inner Ring */}
                 <div className="favicon-inner-ring" />
                 
-                {/* Glowing Favicon Logo */}
+                {/* Glowing Site Favicon Logo */}
                 <img
-                    src="/emerald-icon-3d.png"
+                    src="/apple-touch-icon.png"
                     onError={(e) => { 
-                        if (e.target.src.includes('emerald-icon-3d.png')) {
-                            e.target.src = '/emerald-icon.png';
-                        } else {
-                            e.target.src = '/apple-touch-icon.png';
+                        if (e.target.src.includes('apple-touch-icon.png')) {
+                            e.target.src = '/android-chrome-192x192.png';
+                        } else if (!e.target.src.includes('favicon.ico')) {
+                            e.target.src = '/favicon.ico';
                         }
                     }}
-                    alt="ImportSense AI Favicon Logo"
+                    alt="ImportSense AI Favicon"
                     className={`${dimensions.logo} favicon-logo object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]`}
                 />
             </div>
