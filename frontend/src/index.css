@@ -167,9 +167,35 @@
   animation: card-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Loading Spinner ──────────────────────────────────────── */
+/* ─── Loading Spinner & Favicon Preloader ──────────────────── */
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes favicon-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.7));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 24px rgba(16, 185, 129, 0.95));
+  }
+}
+
+@keyframes aura-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.15);
+  }
 }
 
 .spinner {
@@ -179,6 +205,53 @@
   border-top-color: #34d399;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.favicon-preloader-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.favicon-aura {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(16, 185, 129, 0) 70%);
+  animation: aura-pulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.favicon-outer-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #34d399;
+  border-right-color: rgba(52, 211, 153, 0.3);
+  animation: spin 1.4s linear infinite;
+}
+
+.favicon-inner-ring {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: #10b981;
+  border-left-color: rgba(16, 185, 129, 0.3);
+  animation: spin-reverse 1s linear infinite;
+}
+
+.favicon-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  z-index: 10;
+  animation: favicon-pulse 2s ease-in-out infinite;
 }
 
 /* ─── Score Ring ────────────────────────────────────────────── */

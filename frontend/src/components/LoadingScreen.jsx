@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import FaviconPreloader from './FaviconPreloader';
 
 const AGENT_STEPS = [
     { id: 'ProductAgent', name: 'Product Agent', desc: 'Extracting product details & identity...' },
@@ -15,8 +16,9 @@ export default function LoadingScreen({ stepStates = {} }) {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4">
-            <div className="text-center mb-10 animate-fade-in">
-                <div className="spinner mx-auto mb-6" />
+            <div className="text-center mb-8 animate-fade-in">
+                {/* Favicon Preloader Widget */}
+                <FaviconPreloader size="lg" text="" subtext="" />
                 <h2 className="text-2xl font-black text-white mb-2">Analyzing Your Product</h2>
                 <p className="text-white/90 font-medium">7 AI agents running live regulatory intelligence...</p>
                 <div className="mt-2 flex items-center justify-center gap-2">

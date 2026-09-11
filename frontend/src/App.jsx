@@ -1,16 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LandingPage from './components/LandingPage';
 import ResultsDashboard from './components/ResultsDashboard';
 import LoadingScreen from './components/LoadingScreen';
 import ManualInputModal from './components/ManualInputModal';
+import FaviconPreloader from './components/FaviconPreloader';
 
 function App() {
+  const [isInitializing, setIsInitializing] = useState(true);
   const [view, setView] = useState('landing'); // landing | loading | results | manual
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
   const [pendingUrl, setPendingUrl] = useState('');
   const [partialData, setPartialData] = useState(null);
   const [stepStates, setStepStates] = useState({});
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleAnalyzeFallback = async (url, overrides = {}) => {
     try {
@@ -117,12 +126,20 @@ function App() {
 
   return (
     <div className="min-h-screen relative">
+      {isInitializing && (
+        <FaviconPreloader 
+          fullScreen 
+          size="lg" 
+          text="ImportSense AI" 
+          subtext="Initializing Regulatory Intelligence Engine..." 
+        />
+      )}
       {/* Main content */}
-      {view === 'landing' && (
+      {!isInitializing && view === 'landing' && (
         <LandingPage onAnalyze={handleAnalyze} error={error} />
       )}
-      {view === 'loading' && <LoadingScreen stepStates={stepStates} />}
-      {view === 'manual' && (
+      {!isInitializing && view === 'loading' && <LoadingScreen stepStates={stepStates} />}
+      {!isInitializing && view === 'manual' && (
         <ManualInputModal
           partialData={partialData}
           url={pendingUrl}
@@ -130,7 +147,7 @@ function App() {
           onCancel={handleReset}
         />
       )}
-      {view === 'results' && analysisData && (
+      {!isInitializing && view === 'results' && analysisData && (
         <ResultsDashboard data={analysisData} onReset={handleReset} />
       )}
     </div>
