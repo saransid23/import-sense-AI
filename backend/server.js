@@ -41,8 +41,8 @@ app.get('/', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`\n🚀 ImportSense AI Backend running on http://localhost:${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🧪 Demo products: http://localhost:${PORT}/api/demo-products\n`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 ImportSense AI Backend running on port ${PORT}`);
+    console.log(`📊 Health check: /api/health`);
+    console.log(`🧪 Demo products: /api/demo-products\n`);
 });
