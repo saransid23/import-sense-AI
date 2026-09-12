@@ -97,24 +97,24 @@ export default function ResultsDashboard({ data, onReset }) {
     const isImportBetter = !isProhibited && recData.recommendation.toLowerCase().includes('import the');
 
     return (
-        <div className="min-h-screen px-4 py-6 max-w-6xl mx-auto">
+        <div className="min-h-screen px-2.5 sm:px-4 py-4 sm:py-6 max-w-6xl mx-auto w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8 animate-fade-in">
-                <div className="flex items-center gap-3">
-                    <span className="text-xl font-extrabold text-white tracking-wide">ImportSense AI</span>
-                    <span className="text-xs px-3 py-1 rounded-full font-bold"
+            <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 animate-fade-in flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <span className="text-lg sm:text-xl font-extrabold text-white tracking-wide">ImportSense AI</span>
+                    <span className="text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap"
                         style={{ background: 'rgba(16,185,129,0.2)', color: '#a7f3d0', border: '1px solid rgba(16,185,129,0.4)' }}>
                         Live Intelligence
                     </span>
                 </div>
                 <button id="new-analysis-btn" onClick={onReset}
-                    className="glass-card px-5 py-2 text-sm font-bold text-white hover:text-emerald-300 hover:border-emerald-400/50 transition-all cursor-pointer">
+                    className="glass-card px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white hover:text-emerald-300 hover:border-emerald-400/50 transition-all cursor-pointer">
                     New Analysis
                 </button>
             </div>
 
             {/* Recommendation Banner */}
-            <div className={`glass-card p-6 mb-6 animate-fade-in`}
+            <div className={`glass-card p-4 sm:p-6 mb-6 animate-fade-in w-full`}
                 style={{
                     background: isImportBetter
                         ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.35) 100%)'
@@ -124,13 +124,13 @@ export default function ResultsDashboard({ data, onReset }) {
                         ? '0 0 25px rgba(16, 185, 129, 0.15)'
                         : '0 0 25px rgba(239, 68, 68, 0.2)'
                 }}>
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                            <h2 className="text-2xl font-black text-white">{recData.recommendation}</h2>
+                <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
+                    <div className="flex-1 w-full text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                            <h2 className="text-xl sm:text-2xl font-black text-white break-words">{recData.recommendation}</h2>
                         </div>
-                        <p className="text-white text-base leading-relaxed font-medium">{recData.reason}</p>
-                        <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-black"
+                        <p className="text-white text-sm sm:text-base leading-relaxed font-medium">{recData.reason}</p>
+                        <div className="mt-3 inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-black max-w-full break-words"
                             style={{
                                 background: isImportBetter ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
                                 color: isImportBetter ? '#a7f3d0' : '#fecaca',
@@ -425,9 +425,9 @@ export default function ResultsDashboard({ data, onReset }) {
 /* ─── Helper Components ──────────────────────────────────────── */
 function InfoBadge({ label, value, highlight }) {
     return (
-        <div className="px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <p className="text-xs text-emerald-200 font-semibold mb-0.5">{label}</p>
-            <p className={`text-sm font-extrabold ${highlight ? 'text-emerald-300' : 'text-white'}`}>{value}</p>
+        <div className="px-2.5 sm:px-3 py-2 rounded-lg min-w-0" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <p className="text-[10px] sm:text-xs text-emerald-200 font-semibold mb-0.5">{label}</p>
+            <p className={`text-xs sm:text-sm font-extrabold truncate ${highlight ? 'text-emerald-300' : 'text-white'}`} title={value}>{value}</p>
         </div>
     );
 }
@@ -575,18 +575,18 @@ function ScoreBar({ label, score, reason, delayClass }) {
                 onClick={() => reason && setExpanded(!expanded)}
                 className={`flex items-center gap-2 text-xs py-1 rounded-lg px-1.5 transition-colors ${reason ? 'cursor-pointer hover:bg-white/10' : ''}`}
             >
-                <span className="text-white font-semibold w-28 flex-shrink-0 flex items-center justify-between">
-                    {label}
-                    {reason && <span className="text-[10px] text-white/50">{expanded ? '▲' : '▼'}</span>}
+                <span className="text-white font-semibold w-20 sm:w-28 flex-shrink-0 flex items-center justify-between text-[11px] sm:text-xs">
+                    <span className="truncate">{label}</span>
+                    {reason && <span className="text-[10px] text-white/50 ml-0.5">{expanded ? '▲' : '▼'}</span>}
                 </span>
                 <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
                     <div className="h-2 rounded-full transition-all duration-700"
                         style={{ width: `${score}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
                 </div>
-                <span className="font-extrabold w-6 text-right text-white">{score}</span>
+                <span className="font-extrabold w-6 text-right text-white text-xs">{score}</span>
             </div>
             {reason && expanded && (
-                <div className="text-[11px] text-white/90 font-medium ml-28 pr-2 py-1.5 px-2 bg-white/10 rounded-md border-l-2 border-emerald-400 animate-fade-in">
+                <div className="text-[11px] text-white/90 font-medium ml-20 sm:ml-28 pr-2 py-1.5 px-2 bg-white/10 rounded-md border-l-2 border-emerald-400 animate-fade-in">
                     {reason}
                 </div>
             )}
@@ -778,7 +778,7 @@ function CompliancePanel({ compliance, productName }) {
 
             {/* Live Indicator */}
             {liveIntelligence && (
-                <div className="flex items-center gap-4 mb-4 text-xs font-semibold text-white px-3 py-2 rounded-xl"
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 text-xs font-semibold text-white px-3 py-2 rounded-xl"
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <span className={`flex items-center gap-1.5 ${liveIntelligence.dgftConnected ? 'text-emerald-300 font-bold' : 'text-white/80'}`}>
                         <span className={`w-2 h-2 rounded-full ${liveIntelligence.dgftConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
@@ -793,7 +793,7 @@ function CompliancePanel({ compliance, productName }) {
                             {liveIntelligence.liveMatchesFound} live regulatory match(es)
                         </span>
                     )}
-                    <span className="text-white/90 font-medium ml-auto">
+                    <span className="text-white/90 font-medium sm:ml-auto">
                         {liveIntelligence.productKeywordsAnalyzed?.length ?? 0} keywords analyzed
                     </span>
                 </div>

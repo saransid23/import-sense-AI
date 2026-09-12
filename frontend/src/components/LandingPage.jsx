@@ -66,10 +66,10 @@ export default function LandingPage({ onAnalyze, error }) {
                 style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.35) 0%, transparent 70%)' }} />
 
             {/* Hero Section */}
-            <div className="text-center max-w-4xl mx-auto animate-fade-in relative z-10">
+            <div className="text-center max-w-4xl mx-auto animate-fade-in relative z-10 w-full px-2">
 
                 {/* Title */}
-                <h1 className="text-5xl md:text-7xl font-black leading-[1.1] mb-6 text-white tracking-tight">
+                <h1 className="text-3xl sm:text-5xl md:text-7xl font-black leading-[1.15] sm:leading-[1.1] mb-4 sm:mb-6 text-white tracking-tight break-words">
                     Know the{' '}
                     <span className="relative inline-block">
                         <span className="relative z-10 text-transparent bg-clip-text"
@@ -87,7 +87,7 @@ export default function LandingPage({ onAnalyze, error }) {
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-lg md:text-xl text-white/95 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+                <p className="text-sm sm:text-lg md:text-xl text-white/95 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-medium">
                     Paste any product link from{' '}
                     <span className="text-emerald-300 font-bold">AliExpress</span>,{' '}
                     <span className="text-emerald-300 font-bold">Amazon US</span>,{' '}
@@ -100,9 +100,9 @@ export default function LandingPage({ onAnalyze, error }) {
                 </p>
 
                 {/* Input Form */}
-                <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-6" id="analyze-form">
+                <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-6 w-full" id="analyze-form">
                     <div
-                        className="glass-card flex flex-col sm:flex-row items-stretch gap-2 p-2 transition-all duration-300"
+                        className="glass-card flex flex-col sm:flex-row items-stretch gap-2 p-2 transition-all duration-300 w-full"
                         style={{
                             borderColor: focusInput ? 'rgba(16,185,129,0.6)' : 'rgba(16,185,129,0.3)',
                             boxShadow: focusInput
@@ -110,7 +110,7 @@ export default function LandingPage({ onAnalyze, error }) {
                                 : '0 4px 12px rgba(0,0,0,0.2)',
                         }}
                     >
-                        <div className="flex-1 flex items-center gap-3 px-4">
+                        <div className="flex-1 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 min-w-0">
                             <svg className="w-5 h-5 text-emerald-400 opacity-80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
@@ -121,15 +121,15 @@ export default function LandingPage({ onAnalyze, error }) {
                                 onChange={(e) => setUrl(e.target.value)}
                                 onFocus={() => setFocusInput(true)}
                                 onBlur={() => setFocusInput(false)}
-                                placeholder="Paste a product link from any international marketplace..."
-                                className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/60 font-medium text-base py-3"
+                                placeholder="Paste a product link..."
+                                className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/60 font-medium text-sm sm:text-base py-3 min-w-0"
                             />
                         </div>
                         <button
                             id="analyze-button"
                             type="submit"
                             disabled={!url.trim()}
-                            className="px-8 py-3.5 rounded-xl text-base font-extrabold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
+                            className="px-6 sm:px-8 py-3.5 rounded-xl text-sm sm:text-base font-extrabold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap w-full sm:w-auto"
                             style={{
                                 background: url.trim()
                                     ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
@@ -148,7 +148,7 @@ export default function LandingPage({ onAnalyze, error }) {
                 </form>
 
                 {/* Supported marketplaces */}
-                <div className="flex items-center justify-center gap-4 mb-4 text-xs font-bold text-emerald-200">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-4 text-xs font-bold text-emerald-200">
                     <span>Supports:</span>
                     {['AliExpress', 'Amazon', 'Shein', 'iHerb', 'Nike'].map((m) => (
                         <span key={m} className="px-2.5 py-1 rounded-md text-white font-bold"
@@ -257,18 +257,18 @@ export default function LandingPage({ onAnalyze, error }) {
             </div>
 
             {/* Trust bar */}
-            <div className="mt-16 text-center animate-fade-in animate-delay-6 relative z-10">
-                <div className="flex items-center justify-center gap-6 text-white/90 text-xs font-bold">
+            <div className="mt-12 sm:mt-16 text-center animate-fade-in animate-delay-6 relative z-10 w-full px-2">
+                <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-white/90 text-xs font-bold">
                     <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span>Live DGFT Data</span>
                     </div>
-                    <span className="text-white/40">·</span>
+                    <span className="text-white/40 hidden sm:inline">·</span>
                     <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span>CBIC Customs Tariff</span>
                     </div>
-                    <span className="text-white/40">·</span>
+                    <span className="text-white/40 hidden sm:inline">·</span>
                     <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span>ICEGATE Integration</span>

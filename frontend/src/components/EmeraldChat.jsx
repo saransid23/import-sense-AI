@@ -150,10 +150,10 @@ export default function EmeraldChat({ data }) {
     const quickReplies = getQuickReplies();
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end max-w-[calc(100vw-1.5rem)]">
             {/* Proactive Speech Bubble Nudge */}
             {showNudge && !isOpen && (
-                <div className="mb-3 w-72 sm:w-80 glass-card p-4 rounded-2xl border border-emerald-400/50 shadow-2xl animate-card-pop relative">
+                <div className="mb-3 w-[calc(100vw-2rem)] max-w-xs sm:w-80 glass-card p-4 rounded-2xl border border-emerald-400/50 shadow-2xl animate-card-pop relative">
                     <button
                         onClick={markNudgeDismissed}
                         className="absolute top-2 right-3 text-white/60 hover:text-white text-xs font-bold cursor-pointer"
@@ -183,7 +183,7 @@ export default function EmeraldChat({ data }) {
 
             {/* Main Chat Panel */}
             {isOpen ? (
-                <div className="w-80 sm:w-96 h-[490px] max-h-[82vh] glass-card flex flex-col border border-emerald-500/40 shadow-2xl overflow-hidden animate-card-pop">
+                <div className="w-[calc(100vw-2rem)] max-w-sm sm:w-96 h-[460px] sm:h-[490px] max-h-[80vh] glass-card flex flex-col border border-emerald-500/40 shadow-2xl overflow-hidden animate-card-pop">
                     {/* Header */}
                     <div className="p-3.5 border-b border-white/15 flex items-center justify-between bg-emerald-950/60">
                         <div className="flex items-center gap-2.5">
