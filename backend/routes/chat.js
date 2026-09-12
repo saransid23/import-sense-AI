@@ -7,7 +7,8 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 
-const PYTHON_CHAT_URL = 'http://127.0.0.1:8000/api/v1/chat';
+const AI_ENGINE_BASE = process.env.PYTHON_AI_ENGINE_URL || 'http://127.0.0.1:8000';
+const PYTHON_CHAT_URL = `${AI_ENGINE_BASE.replace(/\/$/, '')}/api/v1/chat`;
 
 /**
  * POST /api/chat

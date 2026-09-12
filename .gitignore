@@ -36,6 +36,9 @@ build/
 # Archives
 *.zip
 
+# Node
+node_modules/
+
 # Runtime / Local Cache Data
 data/
 ai_engine/data/scraper_cache/

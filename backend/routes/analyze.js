@@ -111,8 +111,8 @@ router.get('/analyze/stream', async (req, res) => {
  */
 router.post('/feedback', async (req, res) => {
     try {
-        const { agent, product_name, predicted_level, outcome, notes } = req.body;
-        const pythonRes = await axios.post('http://127.0.0.1:8000/api/v1/feedback', {
+        const aiEngineBase = (process.env.PYTHON_AI_ENGINE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+        const pythonRes = await axios.post(`${aiEngineBase}/api/v1/feedback`, {
             agent: agent || 'import_compliance',
             product_name: product_name || 'Unknown Product',
             predicted_level: predicted_level || 'SAFE',

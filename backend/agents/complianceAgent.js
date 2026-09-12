@@ -43,7 +43,8 @@ const STATUS_CONFIG = {
     },
 };
 
-const PYTHON_AI_ENGINE_URL = 'http://127.0.0.1:8000/api/v1/classify';
+const AI_ENGINE_BASE = process.env.PYTHON_AI_ENGINE_URL || 'http://127.0.0.1:8000';
+const PYTHON_AI_ENGINE_URL = `${AI_ENGINE_BASE.replace(/\/$/, '')}/api/v1/classify`;
 
 /**
  * Compliance Agent
