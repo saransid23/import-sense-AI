@@ -37,6 +37,7 @@ build/
 *.zip
 
 # Node
+**/node_modules/
 node_modules/
 
 # Runtime / Local Cache Data
