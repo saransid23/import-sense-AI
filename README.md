@@ -1,4 +1,4 @@
-# ImportSense AI — Self-Learning Compliance Engine
+# ImportSense AI  Self-Learning Compliance Engine
 
 A fully autonomous, self-learning regulatory compliance engine built in Python. Features 7 distinct AI agents that dynamically fetch laws, circulars, and notifications from 10 Indian government authorities (DGFT, CBIC, ICEGATE, CDSCO, WPC, etc.). The system uses semantic NLP (sentence-transformers) and FAISS vector databases to classify imports without hardcoded rules.
 
